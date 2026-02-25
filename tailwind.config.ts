@@ -13,12 +13,20 @@ export default {
       },
     },
     extend: {
+      fontFamily: {
+        pixel: ['"Press Start 2P"', 'monospace'],
+        mono: ['"Share Tech Mono"', 'monospace'],
+      },
       colors: {
         border: "hsl(var(--border))",
         input: "hsl(var(--input))",
         ring: "hsl(var(--ring))",
         background: "hsl(var(--background))",
         foreground: "hsl(var(--foreground))",
+        "neon-green": "hsl(var(--neon-green))",
+        "neon-yellow": "hsl(var(--neon-yellow))",
+        "neon-cyan": "hsl(var(--neon-cyan))",
+        "neon-red": "hsl(var(--neon-red))",
         primary: {
           DEFAULT: "hsl(var(--primary))",
           foreground: "hsl(var(--primary-foreground))",
