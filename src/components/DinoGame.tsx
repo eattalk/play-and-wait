@@ -632,6 +632,18 @@ const DinoGame = ({ playing, maxTime, onScoreChange, onTimeChange, onGameOver }:
       const speedTier = Math.floor((s.speed - BASE_SPEED) / 100);
       if (speedTier > s.lastSpeedTier) { createSpeedUpSound(getAudio()); s.lastSpeedTier = speedTier; }
 
+      // ── Survival time bonus: ~0.03~0.08 pts/sec scaled by speed ─────────────
+      // Gives fractional unique accumulation over time
+      const survSecond = Math.floor(s.elapsed);
+      if (survSecond > s.lastSurvivalBonus) {
+        s.lastSurvivalBonus = survSecond;
+        // micro bonus: speed ratio * random micro variance
+        const microBonus = (s.speed / BASE_SPEED) * (0.03 + Math.random() * 0.05);
+        s.scoreExact += microBonus;
+        s.score = Math.round(s.scoreExact);
+        onScoreChange(s.score);
+      }
+
       s.wingT += dt;
       if (s.transformFlash > 0) s.transformFlash = Math.max(0, s.transformFlash - dt * 2.2);
 
