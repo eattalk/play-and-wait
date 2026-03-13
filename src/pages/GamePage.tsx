@@ -3,6 +3,12 @@ import { useEffect, useRef, useState, useCallback } from "react";
 import DinoGame from "@/components/DinoGame";
 import GameDemoCanvas from "@/components/GameDemoCanvas";
 
+// EVO color map for flash overlay (matches DinoGame's EVO array order)
+const EVO_COLORS = [
+  "#2aff8f","#00ffee","#ffff44","#ff9900","#cc44ff",
+  "#44ddff","#ff4422","#aaddff","#ffcc00","#ffffff",
+];
+
 function playCountdownBeep(n: number) {
   try {
     const ctx = new (window.AudioContext || (window as any).webkitAudioContext)();
