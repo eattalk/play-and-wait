@@ -149,6 +149,9 @@ interface StarObj  { x: number; y: number; radius: number; points: number; angle
 interface Cloud    { x: number; y: number; w: number; }
 interface Dust     { x: number; y: number; life: number; vx: number; vy: number; }
 
+// Star point values — varied to minimize ties
+const STAR_POINT_TABLE = [1, 1, 2, 2, 3, 5, 7, 10];
+
 // ─── Component ────────────────────────────────────────────────────────────────
 const DinoGame = ({ playing, maxTime, onScoreChange, onTimeChange, onGameOver }: DinoGameProps) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -160,7 +163,9 @@ const DinoGame = ({ playing, maxTime, onScoreChange, onTimeChange, onGameOver }:
     stars: [] as StarObj[],
     clouds: [] as Cloud[],
     dust: [] as Dust[],
-    score: 0, speed: BASE_SPEED, elapsed: 0,
+    score: 0,           // integer display score
+    scoreExact: 0,      // precise fractional score (used internally)
+    speed: BASE_SPEED, elapsed: 0,
     legF: 0, wingT: 0, gameOver: false,
     obsTimer: 0, nextObsInterval: 1.3,
     starTimer: 0, cloudTimer: 0,
@@ -169,6 +174,9 @@ const DinoGame = ({ playing, maxTime, onScoreChange, onTimeChange, onGameOver }:
     evoLevel: 0,
     transformFlash: 0,
     lastSpeedTier: 0,           // for speed-up sound trigger
+    comboStreak: 0,             // consecutive stars collected
+    lastComboTime: 0,           // time of last star collection
+    lastSurvivalBonus: 0,       // last elapsed second when survival bonus was awarded
   });
   const audioCtxRef = useRef<AudioContext | null>(null);
   const rafRef = useRef(0);
