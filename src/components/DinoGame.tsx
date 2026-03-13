@@ -6,6 +6,7 @@ interface DinoGameProps {
   onScoreChange: (score: number) => void;
   onTimeChange: (ms: number) => void;
   onGameOver: (finalScore: number) => void;
+  onEvolve?: (level: number, name: string) => void;
 }
 
 // ─── Audio helpers ────────────────────────────────────────────────────────────
@@ -150,7 +151,7 @@ interface Cloud    { x: number; y: number; w: number; }
 interface Dust     { x: number; y: number; life: number; vx: number; vy: number; }
 
 // ─── Component ────────────────────────────────────────────────────────────────
-const DinoGame = ({ playing, maxTime, onScoreChange, onTimeChange, onGameOver }: DinoGameProps) => {
+const DinoGame = ({ playing, maxTime, onScoreChange, onTimeChange, onGameOver, onEvolve }: DinoGameProps) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const stateRef = useRef({
     dy: GROUND_Y - DINO_H, dvy: 0,
@@ -661,6 +662,7 @@ const DinoGame = ({ playing, maxTime, onScoreChange, onTimeChange, onGameOver }:
             s.evoLevel = newLevel;
             s.transformFlash = 1.0;
             createTransformSound(getAudio(), newLevel);
+            onEvolve?.(newLevel, EVO[newLevel].name);
           }
         }
         return ob.x > -100;
