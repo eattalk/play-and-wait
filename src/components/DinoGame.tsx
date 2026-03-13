@@ -215,12 +215,13 @@ const DinoGame = ({ playing, maxTime, onScoreChange, onTimeChange, onGameOver }:
     const s = stateRef.current;
     Object.assign(s, {
       dy: GROUND_Y - DINO_H, dvy: 0, wasOnGround: true, jumpsLeft: 1,
-      obstacles: [], stars: [], dust: [], score: 0, speed: BASE_SPEED,
+      obstacles: [], stars: [], dust: [], score: 0, scoreExact: 0, speed: BASE_SPEED,
       elapsed: 0, legF: 0, wingT: 0, gameOver: false,
       clouds: [{ x: 200, y: 40, w: 80 }, { x: 520, y: 55, w: 65 }],
       obsTimer: 0, nextObsInterval: 1.3,
       starTimer: 0, cloudTimer: 0, lastTime: 0,
       obstaclesPassed: 0, evoLevel: 0, transformFlash: 0, lastSpeedTier: 0,
+      comboStreak: 0, lastComboTime: 0, lastSurvivalBonus: 0,
     });
 
     const ctx = canvas.getContext("2d")!;
