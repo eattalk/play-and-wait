@@ -683,17 +683,37 @@ const DinoGame = ({ playing, maxTime, onScoreChange, onTimeChange, onGameOver }:
             s.transformFlash = 1.0;
             createTransformSound(getAudio(), newLevel);
           }
+          // ── Speed-based obstacle pass bonus (unique per pass, fractional) ──
+          // e.g. speed 300 → +0.3~0.5, speed 700 → +0.7~1.1
+          const passBonus = (s.speed / 1000) * (0.3 + Math.random() * 0.4);
+          s.scoreExact += passBonus;
+          s.score = Math.round(s.scoreExact);
+          onScoreChange(s.score);
         }
         return ob.x > -100;
       });
 
-      // Stars
+      // Stars — combo multiplier + varied point values
       s.stars = s.stars.filter(star => {
         star.x -= s.speed * dt; star.angle += STAR_SPIN * dt;
         if (Math.abs(star.x - (DINO_X + DINO_W / 2)) < star.radius + 16 &&
             Math.abs(star.y - (s.dy + DINO_H / 2))   < star.radius + 20) {
-          s.score += star.points; onScoreChange(s.score);
-          createStarSound(getAudio(), 0.8 + s.score * 0.02); // pitch rises with score
+          // Combo: within 2.5s of last star = combo streak
+          const comboWindow = 2.5;
+          if (s.elapsed - s.lastComboTime < comboWindow) {
+            s.comboStreak = Math.min(s.comboStreak + 1, 8);
+          } else {
+            s.comboStreak = 1;
+          }
+          s.lastComboTime = s.elapsed;
+          // combo multiplier: 1× up to 1.5× at streak 4, 2× at streak 7+
+          const comboMult = 1 + Math.min(s.comboStreak - 1, 7) * 0.15;
+          // exact fractional addition with tiny random salt to break ties
+          const starExact = star.points * comboMult + Math.random() * 0.09;
+          s.scoreExact += starExact;
+          s.score = Math.round(s.scoreExact);
+          onScoreChange(s.score);
+          createStarSound(getAudio(), 0.8 + s.comboStreak * 0.08);
           return false;
         }
         return star.x > -50;
