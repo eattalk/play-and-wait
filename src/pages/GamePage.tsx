@@ -32,6 +32,28 @@ function playCountdownBeep(n: number) {
   } catch (_) { /* ignore */ }
 }
 
+const MAX_TIME_BUFFER = 15;
+
+const GamePage = () => {
+  const { game_type } = useParams();
+  const [searchParams] = useSearchParams();
+  const navigate = useNavigate();
+  const table_name = searchParams.get("table_name") || "table1";
+
+  const [phase, setPhase] = useState<"instructions" | "countdown" | "playing" | "waiting">("instructions");
+  const [countdown, setCountdown] = useState(3);
+  const [score, setScore] = useState(0);
+  const [gameTime, setGameTime] = useState(0);
+  const [maxTime] = useState(90);
+  const waitTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const gameStartRef = useRef<number>(0);
+
+  const goToResult = useCallback((finalScore: number) => {
+    navigate(`/webview/games/result?score=${finalScore}`);
+  }, [navigate]);
+
+  const startGame = () => { setPhase("countdown"); setCountdown(3); };
+
   useEffect(() => {
     if (phase !== "countdown") return;
     playCountdownBeep(countdown);
