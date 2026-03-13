@@ -27,12 +27,6 @@ const Index = () => {
           DINO STAR RUSH
         </h1>
         <p className="font-mono text-muted-foreground text-sm">Web Game Platform</p>
-        <div className="border border-neon-green/20 rounded p-6 bg-card/60 space-y-3 text-left">
-          <p className="font-pixel text-neon-yellow text-xs">URL FORMAT:</p>
-          <p className="font-mono text-xs text-foreground/80">
-            /webview/games/<span className="text-neon-cyan">&#123;game_type&#125;</span>?table_name=<span className="text-neon-green">&#123;table_name&#125;</span>
-          </p>
-        </div>
         <button
           className="font-pixel text-xs px-6 py-3 border border-neon-green text-neon-green rounded hover:bg-neon-green hover:text-background transition-all"
           onClick={() => navigate("/webview/games/dino?table_name=table1")}
