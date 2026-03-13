@@ -184,9 +184,10 @@ const DinoGame = ({ playing, maxTime, onScoreChange, onTimeChange, onGameOver }:
     return audioCtxRef.current;
   }, []);
 
-  const jump = useCallback(() => {
+  const jumpStart = useCallback(() => {
     const s = stateRef.current;
     if (s.gameOver || !playingRef.current) return;
+    s.jumpHeld = true;
     if (s.jumpsLeft > 0) {
       s.dvy = JUMP_VEL; s.jumpsLeft = 0;
       createJumpSound(getAudio());
@@ -196,11 +197,24 @@ const DinoGame = ({ playing, maxTime, onScoreChange, onTimeChange, onGameOver }:
     }
   }, [getAudio]);
 
+  const jumpEnd = useCallback(() => {
+    const s = stateRef.current;
+    s.jumpHeld = false;
+    // 짧게 뗐을 때 상승 중이면 즉시 속도를 줄여 낮은 점프 구현
+    if (s.dvy < 0) s.dvy *= 0.38;
+  }, []);
+
   useEffect(() => {
-    const h = (e: KeyboardEvent) => { if (e.code === "Space" || e.code === "ArrowUp") { e.preventDefault(); jump(); } };
-    window.addEventListener("keydown", h);
-    return () => window.removeEventListener("keydown", h);
-  }, [jump]);
+    const onDown = (e: KeyboardEvent) => {
+      if (e.code === "Space" || e.code === "ArrowUp") { e.preventDefault(); if (!e.repeat) jumpStart(); }
+    };
+    const onUp = (e: KeyboardEvent) => {
+      if (e.code === "Space" || e.code === "ArrowUp") { e.preventDefault(); jumpEnd(); }
+    };
+    window.addEventListener("keydown", onDown);
+    window.addEventListener("keyup", onUp);
+    return () => { window.removeEventListener("keydown", onDown); window.removeEventListener("keyup", onUp); };
+  }, [jumpStart, jumpEnd]);
 
   useEffect(() => {
     const canvas = canvasRef.current;
