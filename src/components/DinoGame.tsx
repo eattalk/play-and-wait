@@ -117,7 +117,7 @@ const DINO_X = 100, DINO_W = 44, DINO_H = 52;
 const GRAVITY = 2520;
 const JUMP_VEL = -880;
 const BASE_SPEED = 280;
-const SPEED_RAMP = 22;
+const SPEED_RAMP = 28;
 const CLOUD_SPAWN_INTERVAL = 2.8;
 const STAR_SPAWN_INTERVAL = 1.1;
 const DUST_VX = 180, DUST_VY = -130, DUST_G = 360, DUST_DECAY = 2.8;
@@ -153,6 +153,7 @@ const DinoGame = ({ playing, maxTime, onScoreChange, onTimeChange, onGameOver }:
     dy: GROUND_Y - DINO_H, dvy: 0,
     wasOnGround: true,
     jumpsLeft: 1,
+    jumpHeld: false,
     obstacles: [] as Obstacle[],
     stars: [] as StarObj[],
     clouds: [] as Cloud[],
@@ -183,9 +184,10 @@ const DinoGame = ({ playing, maxTime, onScoreChange, onTimeChange, onGameOver }:
     return audioCtxRef.current;
   }, []);
 
-  const jump = useCallback(() => {
+  const jumpStart = useCallback(() => {
     const s = stateRef.current;
     if (s.gameOver || !playingRef.current) return;
+    s.jumpHeld = true;
     if (s.jumpsLeft > 0) {
       s.dvy = JUMP_VEL; s.jumpsLeft = 0;
       createJumpSound(getAudio());
@@ -195,11 +197,24 @@ const DinoGame = ({ playing, maxTime, onScoreChange, onTimeChange, onGameOver }:
     }
   }, [getAudio]);
 
+  const jumpEnd = useCallback(() => {
+    const s = stateRef.current;
+    s.jumpHeld = false;
+    // 짧게 뗐을 때 상승 중이면 즉시 속도를 줄여 낮은 점프 구현
+    if (s.dvy < 0) s.dvy *= 0.38;
+  }, []);
+
   useEffect(() => {
-    const h = (e: KeyboardEvent) => { if (e.code === "Space" || e.code === "ArrowUp") { e.preventDefault(); jump(); } };
-    window.addEventListener("keydown", h);
-    return () => window.removeEventListener("keydown", h);
-  }, [jump]);
+    const onDown = (e: KeyboardEvent) => {
+      if (e.code === "Space" || e.code === "ArrowUp") { e.preventDefault(); if (!e.repeat) jumpStart(); }
+    };
+    const onUp = (e: KeyboardEvent) => {
+      if (e.code === "Space" || e.code === "ArrowUp") { e.preventDefault(); jumpEnd(); }
+    };
+    window.addEventListener("keydown", onDown);
+    window.addEventListener("keyup", onUp);
+    return () => { window.removeEventListener("keydown", onDown); window.removeEventListener("keyup", onUp); };
+  }, [jumpStart, jumpEnd]);
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -208,7 +223,7 @@ const DinoGame = ({ playing, maxTime, onScoreChange, onTimeChange, onGameOver }:
 
     const s = stateRef.current;
     Object.assign(s, {
-      dy: GROUND_Y - DINO_H, dvy: 0, wasOnGround: true, jumpsLeft: 1,
+      dy: GROUND_Y - DINO_H, dvy: 0, wasOnGround: true, jumpsLeft: 1, jumpHeld: false,
       obstacles: [], stars: [], dust: [], score: 0, scoreExact: 0, speed: BASE_SPEED,
       elapsed: 0, legF: 0, wingT: 0, gameOver: false,
       clouds: [{ x: 280, y: 44, w: 90 }, { x: 680, y: 60, w: 75 }],
@@ -554,8 +569,8 @@ const DinoGame = ({ playing, maxTime, onScoreChange, onTimeChange, onGameOver }:
     }
 
     function randomObsInterval() {
-      const base = Math.max(0.45, 1.3 - (s.speed - BASE_SPEED) / 400);
-      return base * (0.5 + Math.random() * 0.9);
+      const base = Math.max(0.35, 1.2 - (s.speed - BASE_SPEED) / 320);
+      return base * (0.45 + Math.random() * 0.75);
     }
 
     function spawnWave() {
@@ -621,9 +636,10 @@ const DinoGame = ({ playing, maxTime, onScoreChange, onTimeChange, onGameOver }:
       s.wingT += dt;
       if (s.transformFlash > 0) s.transformFlash = Math.max(0, s.transformFlash - dt * 2.2);
 
-      // Physics
+      // Physics — 홀드 중 상승 시 중력 완화(높은 점프), 뗐을 때 빠르게 감소(짧은 점프)
       const wasOnGround = s.dy >= GROUND_Y - DINO_H - 2;
-      s.dvy += GRAVITY * dt;
+      const gravMult = (s.jumpHeld && s.dvy < 0) ? 0.42 : 1.0;
+      s.dvy += GRAVITY * gravMult * dt;
       s.dy  += s.dvy * dt;
       const nowOnGround = s.dy >= GROUND_Y - DINO_H;
       if (nowOnGround) {
@@ -765,10 +781,13 @@ const DinoGame = ({ playing, maxTime, onScoreChange, onTimeChange, onGameOver }:
 
   return (
     <div
-      className="relative border-2 border-neon-green/40 rounded overflow-hidden cursor-pointer w-full"
+      className="relative border-2 border-neon-green/40 rounded overflow-hidden cursor-pointer w-full select-none"
       style={{ boxShadow: "0 0 30px hsl(var(--neon-green) / 0.15)" }}
-      onClick={jump}
-      onTouchStart={e => { e.preventDefault(); jump(); }}
+      onMouseDown={jumpStart}
+      onMouseUp={jumpEnd}
+      onMouseLeave={jumpEnd}
+      onTouchStart={e => { e.preventDefault(); jumpStart(); }}
+      onTouchEnd={e => { e.preventDefault(); jumpEnd(); }}
     >
       {/* Canvas scales to fill container width, preserving aspect ratio */}
       <canvas
