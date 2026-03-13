@@ -623,10 +623,9 @@ const DinoGame = ({ playing, maxTime, onScoreChange, onTimeChange, onGameOver }:
       s.wingT += dt;
       if (s.transformFlash > 0) s.transformFlash = Math.max(0, s.transformFlash - dt * 2.2);
 
-      // Physics — 홀드 중 상승 시 중력 완화(높은 점프), 뗐을 때 빠르게 감소(짧은 점프)
+      // Physics
       const wasOnGround = s.dy >= GROUND_Y - DINO_H - 2;
-      const gravMult = (s.jumpHeld && s.dvy < 0) ? 0.42 : 1.0;
-      s.dvy += GRAVITY * gravMult * dt;
+      s.dvy += GRAVITY * dt;
       s.dy  += s.dvy * dt;
       const nowOnGround = s.dy >= GROUND_Y - DINO_H;
       if (nowOnGround) {
