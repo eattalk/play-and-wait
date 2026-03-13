@@ -1,6 +1,7 @@
 import { useSearchParams, useNavigate, useParams } from "react-router-dom";
 import { useEffect, useRef, useState, useCallback } from "react";
 import DinoGame from "@/components/DinoGame";
+import GameDemoCanvas from "@/components/GameDemoCanvas";
 
 const MAX_TIME_BUFFER = 15; // seconds buffer after game ends
 
