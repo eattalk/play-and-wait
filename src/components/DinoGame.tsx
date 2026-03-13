@@ -6,6 +6,7 @@ interface DinoGameProps {
   onScoreChange: (score: number) => void;
   onTimeChange: (ms: number) => void;
   onGameOver: (finalScore: number) => void;
+  onEvolve?: (level: number, name: string) => void;
 }
 
 // ─── Audio helpers ────────────────────────────────────────────────────────────
