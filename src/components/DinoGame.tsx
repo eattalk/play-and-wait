@@ -51,16 +51,35 @@ function createHitSound(ctx: AudioContext) {
   osc.stop(ctx.currentTime + 0.3);
 }
 
-// ---- Game constants ----
+// ---- Game constants (all per-second) ----
 const CANVAS_W = 700;
 const CANVAS_H = 220;
 const GROUND_Y = 170;
 const DINO_X = 80;
 const DINO_W = 36;
 const DINO_H = 44;
-const GRAVITY = 0.7;
-const JUMP_VEL = -14;
-const BASE_SPEED = 5;
+
+// Physics (per-second²)
+const GRAVITY = 2520;       // was 0.7/frame → 0.7 * 60² ≈ 2520 px/s²
+// Velocity (per-second)
+const JUMP_VEL = -840;      // was -14/frame → -14 * 60 = -840 px/s
+// Speed (px/s)
+const BASE_SPEED = 300;     // was 5/frame → 5 * 60 = 300 px/s
+// Speed ramp (px/s per second of gameplay)
+const SPEED_RAMP = 2.4;     // was 0.04/frame/s → 0.04 * 60 = 2.4 px/s/s
+
+// Spawn intervals (seconds)
+const STAR_SPAWN_INTERVAL = 70 / 60;   // was every 70 frames
+const CLOUD_SPAWN_INTERVAL = 3.0;       // was every 180 frames
+
+// Dust particle speeds (per-second)
+const DUST_VX_SCALE = 180;   // was ±3/frame → ±3 * 60
+const DUST_VY_SCALE = -120;  // was -2/frame → -2 * 60
+const DUST_GRAVITY = 360;    // was +0.1/frame → 0.1 * 60² ≈ 360 px/s²
+const DUST_DECAY = 3.0;      // was 0.05/frame → 0.05 * 60
+
+// Star rotation (rad/s)
+const STAR_SPIN = 3.0;       // was 0.05 rad/frame → 0.05 * 60
 
 interface Obstacle {
   x: number;
@@ -84,22 +103,37 @@ interface Cloud {
   w: number;
 }
 
+interface DustParticle {
+  x: number;
+  y: number;
+  life: number;
+  vx: number; // px/s
+  vy: number; // px/s
+}
+
 const DinoGame = ({ playing, maxTime, onScoreChange, onTimeChange, onGameOver }: DinoGameProps) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const stateRef = useRef({
     dinoY: GROUND_Y - DINO_H,
-    dinoVY: 0,
+    dinoVY: 0,          // px/s
     jumpsLeft: 2,
     obstacles: [] as Obstacle[],
     stars: [] as StarObj[],
     clouds: [] as Cloud[],
     score: 0,
-    speed: BASE_SPEED,
-    frameCount: 0,
+    speed: BASE_SPEED,  // px/s
+    elapsed: 0,         // total seconds since game start
+    legFrame: 0,        // accumulator for leg animation (unitless)
     gameOver: false,
-    startTime: 0,
-    legFrame: 0,
-    dustParticles: [] as { x: number; y: number; life: number; vx: number; vy: number }[],
+    dustParticles: [] as DustParticle[],
+    // Spawn timers (seconds)
+    obstacleTimer: 0,
+    starTimer: 0,
+    cloudTimer: 0,
+    // RAF loop guard
+    lastTime: 0,
+    // Wing flap accumulator for birds
+    wingTime: 0,
   });
   const audioCtxRef = useRef<AudioContext | null>(null);
   const rafRef = useRef<number>(0);
@@ -120,14 +154,13 @@ const DinoGame = ({ playing, maxTime, onScoreChange, onTimeChange, onGameOver }:
       s.dinoVY = JUMP_VEL;
       s.jumpsLeft--;
       createJumpSound(getAudioCtx());
-      // Dust
       for (let i = 0; i < 5; i++) {
         s.dustParticles.push({
           x: DINO_X + DINO_W / 2,
           y: GROUND_Y,
           life: 1,
-          vx: (Math.random() - 0.5) * 3,
-          vy: -Math.random() * 2,
+          vx: (Math.random() - 0.5) * DUST_VX_SCALE,
+          vy: -Math.random() * Math.abs(DUST_VY_SCALE),
         });
       }
     }
@@ -148,11 +181,17 @@ const DinoGame = ({ playing, maxTime, onScoreChange, onTimeChange, onGameOver }:
     const canvas = canvasRef.current;
     if (!canvas || !playing) return;
 
+    // Cancel any existing RAF loop before starting a new one
+    if (rafRef.current) {
+      cancelAnimationFrame(rafRef.current);
+      rafRef.current = 0;
+    }
+
     const s = stateRef.current;
     s.gameOver = false;
     s.score = 0;
     s.speed = BASE_SPEED;
-    s.frameCount = 0;
+    s.elapsed = 0;
     s.dinoY = GROUND_Y - DINO_H;
     s.dinoVY = 0;
     s.jumpsLeft = 2;
@@ -162,12 +201,16 @@ const DinoGame = ({ playing, maxTime, onScoreChange, onTimeChange, onGameOver }:
       { x: 200, y: 40, w: 80 },
       { x: 500, y: 60, w: 60 },
     ];
-    s.startTime = performance.now();
     s.dustParticles = [];
+    s.obstacleTimer = 0;
+    s.starTimer = 0;
+    s.cloudTimer = 0;
+    s.legFrame = 0;
+    s.wingTime = 0;
+    s.lastTime = 0; // will be set on first frame
 
     const ctx = canvas.getContext("2d")!;
 
-    // Color palette
     const C = {
       bg: "#0a0e1a",
       ground: "#1a3a2a",
@@ -184,21 +227,15 @@ const DinoGame = ({ playing, maxTime, onScoreChange, onTimeChange, onGameOver }:
 
     function drawDino(y: number, legF: number) {
       ctx.save();
-      // Body
       ctx.fillStyle = C.dino;
       ctx.fillRect(DINO_X, y, DINO_W, DINO_H - 12);
-      // Head
       ctx.fillRect(DINO_X + 8, y - 16, 22, 18);
-      // Eye
       ctx.fillStyle = C.dinoEye;
       ctx.fillRect(DINO_X + 22, y - 12, 5, 5);
-      // Jaw
       ctx.fillStyle = C.dino;
       ctx.fillRect(DINO_X + 24, y - 6, 10, 4);
-      // Tail
       ctx.fillRect(DINO_X - 10, y + 4, 14, 8);
-      // Legs
-      const legOffset = Math.sin(legF * 0.3) * 6;
+      const legOffset = Math.sin(legF * 0.005) * 6;
       ctx.fillRect(DINO_X + 4, y + DINO_H - 16, 10, 14 + legOffset);
       ctx.fillRect(DINO_X + 18, y + DINO_H - 16, 10, 14 - legOffset);
       ctx.restore();
@@ -231,17 +268,15 @@ const DinoGame = ({ playing, maxTime, onScoreChange, onTimeChange, onGameOver }:
       ctx.shadowColor = C.obstacle;
       ctx.shadowBlur = 8;
       if (ob.type === "cactus") {
-        // Main body
         ctx.fillRect(ob.x + ob.w / 2 - 6, ob.y, 12, ob.h);
-        // Arms
         ctx.fillRect(ob.x + ob.w / 2 - 20, ob.y + ob.h * 0.3, 14, 8);
         ctx.fillRect(ob.x + ob.w / 2 + 6, ob.y + ob.h * 0.4, 14, 8);
         ctx.fillRect(ob.x + ob.w / 2 - 20, ob.y + ob.h * 0.1, 6, ob.h * 0.25);
         ctx.fillRect(ob.x + ob.w / 2 + 14, ob.y + ob.h * 0.2, 6, ob.h * 0.2);
       } else {
-        // Bird - simple pixel bird
         ctx.fillRect(ob.x, ob.y, ob.w, 14);
-        const wingY = Math.sin(s.frameCount * 0.3) > 0 ? ob.y - 8 : ob.y + 8;
+        // wing flap driven by time, not frameCount
+        const wingY = Math.sin(s.wingTime * 18) > 0 ? ob.y - 8 : ob.y + 8;
         ctx.fillRect(ob.x + 4, wingY, ob.w - 8, 6);
         ctx.fillStyle = "#ff8800";
         ctx.fillRect(ob.x + ob.w - 8, ob.y + 4, 8, 4);
@@ -260,7 +295,7 @@ const DinoGame = ({ playing, maxTime, onScoreChange, onTimeChange, onGameOver }:
     }
 
     function spawnObstacle() {
-      const isBird = s.speed > 8 && Math.random() < 0.3;
+      const isBird = s.speed > 480 && Math.random() < 0.3; // was speed > 8 px/frame → 480 px/s
       const h = isBird ? 20 : Math.random() * 30 + 30;
       const y = isBird ? GROUND_Y - DINO_H - 10 - Math.random() * 30 : GROUND_Y - h;
       s.obstacles.push({
@@ -298,41 +333,67 @@ const DinoGame = ({ playing, maxTime, onScoreChange, onTimeChange, onGameOver }:
     function loop(ts: number) {
       if (s.gameOver) return;
 
-      const elapsed = (ts - s.startTime) / 1000;
-      onTimeChange(ts - s.startTime);
+      // Initialize lastTime on the very first frame
+      if (s.lastTime === 0) {
+        s.lastTime = ts;
+        rafRef.current = requestAnimationFrame(loop);
+        return;
+      }
+
+      // Delta time in seconds, clamped to prevent tab-switch spikes
+      const dt = Math.min((ts - s.lastTime) / 1000, 0.033);
+      s.lastTime = ts;
+
+      s.elapsed += dt;
+      onTimeChange(s.elapsed * 1000);
 
       // Hard time limit
-      if (elapsed >= maxTime) {
+      if (s.elapsed >= maxTime) {
         s.gameOver = true;
         createHitSound(getAudioCtx());
         onGameOver(s.score);
         return;
       }
 
-      // Speed ramp
-      s.speed = BASE_SPEED + elapsed * 0.04;
-      s.frameCount++;
+      // Speed ramp (px/s, increases over time)
+      s.speed = BASE_SPEED + s.elapsed * SPEED_RAMP;
+      s.wingTime += dt;
 
-      // Physics
-      s.dinoVY += GRAVITY;
-      s.dinoY += s.dinoVY;
+      // Physics (per-second)
+      s.dinoVY += GRAVITY * dt;
+      s.dinoY += s.dinoVY * dt;
       if (s.dinoY >= GROUND_Y - DINO_H) {
         s.dinoY = GROUND_Y - DINO_H;
         s.dinoVY = 0;
         s.jumpsLeft = 2;
       }
 
-      // Spawn
-      const spawnInterval = Math.max(40, 90 - s.speed * 6);
-      if (s.frameCount % Math.floor(spawnInterval) === 0) spawnObstacle();
-      if (s.frameCount % 70 === 0) spawnStar();
-      if (s.frameCount % 180 === 0) {
+      // Spawn: obstacle interval scales with speed
+      // spawnInterval: was Math.max(40, 90 - speed_px_per_frame * 6) frames
+      // speed_px_per_frame = s.speed / 60
+      // → Math.max(40/60, (90 - (s.speed/60)*6) / 60) seconds
+      const spawnIntervalSec = Math.max(40 / 60, (90 - (s.speed / 60) * 6) / 60);
+      s.obstacleTimer += dt;
+      if (s.obstacleTimer >= spawnIntervalSec) {
+        spawnObstacle();
+        s.obstacleTimer = 0;
+      }
+
+      s.starTimer += dt;
+      if (s.starTimer >= STAR_SPAWN_INTERVAL) {
+        spawnStar();
+        s.starTimer = 0;
+      }
+
+      s.cloudTimer += dt;
+      if (s.cloudTimer >= CLOUD_SPAWN_INTERVAL) {
         s.clouds.push({ x: CANVAS_W + 10, y: 30 + Math.random() * 50, w: 60 + Math.random() * 60 });
+        s.cloudTimer = 0;
       }
 
       // Move obstacles
       s.obstacles = s.obstacles.filter(ob => {
-        ob.x -= s.speed;
+        ob.x -= s.speed * dt;
         if (checkCollision(ob)) {
           s.gameOver = true;
           createHitSound(getAudioCtx());
@@ -344,8 +405,8 @@ const DinoGame = ({ playing, maxTime, onScoreChange, onTimeChange, onGameOver }:
 
       // Move stars
       s.stars = s.stars.filter(star => {
-        star.x -= s.speed;
-        star.angle += 0.05;
+        star.x -= s.speed * dt;
+        star.angle += STAR_SPIN * dt;
         const cx = star.x;
         const cy = star.y;
         const dinoMidX = DINO_X + DINO_W / 2;
@@ -359,23 +420,23 @@ const DinoGame = ({ playing, maxTime, onScoreChange, onTimeChange, onGameOver }:
         return star.x > -50;
       });
 
-      // Move clouds
+      // Move clouds (30% of game speed)
       s.clouds = s.clouds.filter(c => {
-        c.x -= s.speed * 0.3;
+        c.x -= s.speed * 0.3 * dt;
         return c.x > -100;
       });
 
-      // Leg animation (only when on ground)
+      // Leg animation (only when on ground, speed-proportional)
       if (s.dinoY >= GROUND_Y - DINO_H - 2) {
-        s.legFrame += s.speed;
+        s.legFrame += s.speed * dt;
       }
 
-      // Dust
+      // Dust particles
       s.dustParticles = s.dustParticles.filter(p => {
-        p.x += p.vx;
-        p.y += p.vy;
-        p.vy += 0.1;
-        p.life -= 0.05;
+        p.x += p.vx * dt;
+        p.y += p.vy * dt;
+        p.vy += DUST_GRAVITY * dt;
+        p.life -= DUST_DECAY * dt;
         return p.life > 0;
       });
 
@@ -389,12 +450,9 @@ const DinoGame = ({ playing, maxTime, onScoreChange, onTimeChange, onGameOver }:
       ctx.fillStyle = grad;
       ctx.fillRect(0, 0, CANVAS_W, CANVAS_H);
 
-      // Background stars
-      if (s.frameCount < 2) {
-        // cached on first frame
-      }
+      // Background stars (scroll driven by elapsed time, not frameCount)
       for (let i = 0; i < 40; i++) {
-        const bx = ((i * 173 + s.frameCount * 0.2) % CANVAS_W);
+        const bx = ((i * 173 + s.elapsed * 12) % CANVAS_W);
         const by = (i * 37) % (GROUND_Y - 20);
         ctx.fillStyle = `rgba(180,220,255,${0.2 + (i % 5) * 0.1})`;
         ctx.fillRect(bx, by, 1, 1);
@@ -408,9 +466,9 @@ const DinoGame = ({ playing, maxTime, onScoreChange, onTimeChange, onGameOver }:
       ctx.fillRect(0, GROUND_Y, CANVAS_W, CANVAS_H - GROUND_Y);
       ctx.fillStyle = "#2aff8f";
       ctx.fillRect(0, GROUND_Y, CANVAS_W, 2);
-      // Ground details
+      // Ground details (scroll by elapsed * speed)
       for (let i = 0; i < 8; i++) {
-        const gx = ((i * 90 + s.frameCount * s.speed * 0.5) % CANVAS_W);
+        const gx = ((i * 90 + s.elapsed * s.speed * 0.5) % CANVAS_W);
         ctx.fillStyle = "rgba(42,255,143,0.15)";
         ctx.fillRect(gx, GROUND_Y + 4, 40, 2);
       }
@@ -439,7 +497,10 @@ const DinoGame = ({ playing, maxTime, onScoreChange, onTimeChange, onGameOver }:
     }
 
     rafRef.current = requestAnimationFrame(loop);
-    return () => cancelAnimationFrame(rafRef.current);
+    return () => {
+      cancelAnimationFrame(rafRef.current);
+      rafRef.current = 0;
+    };
   }, [playing, maxTime, onScoreChange, onTimeChange, onGameOver, getAudioCtx]);
 
   return (
