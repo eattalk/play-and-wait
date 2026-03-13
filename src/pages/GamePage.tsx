@@ -1,6 +1,7 @@
 import { useSearchParams, useNavigate, useParams } from "react-router-dom";
 import { useEffect, useRef, useState, useCallback } from "react";
 import DinoGame from "@/components/DinoGame";
+import GameDemoCanvas from "@/components/GameDemoCanvas";
 
 const MAX_TIME_BUFFER = 15; // seconds buffer after game ends
 
@@ -96,24 +97,36 @@ const GamePage = () => {
 
       {/* Instructions Screen */}
       {phase === "instructions" && (
-        <div className="relative z-10 flex flex-col items-center gap-8 px-6 max-w-lg text-center">
-          <h1 className="font-pixel text-neon-green text-xl leading-relaxed" style={{ textShadow: "0 0 20px hsl(var(--neon-green))" }}>
+        <div className="relative z-10 flex flex-col items-center gap-5 px-4 w-full max-w-2xl">
+          <h1 className="font-pixel text-neon-green text-lg" style={{ textShadow: "0 0 20px hsl(var(--neon-green))" }}>
             DINO STAR RUSH
           </h1>
-          <div className="font-pixel text-foreground text-xs leading-relaxed space-y-3 text-left border border-neon-green/30 p-6 rounded bg-card/80">
-            <p className="text-neon-yellow">HOW TO PLAY:</p>
-            <p>► Press <span className="text-neon-green">SPACE</span> or <span className="text-neon-green">TAP</span> to jump</p>
-            <p>► Avoid the <span className="text-neon-red">obstacles</span> coming at you</p>
-            <p>► Collect <span className="text-neon-yellow">★ STARS</span> to earn points</p>
-            <p>► The game speeds up over time!</p>
-            <p>► Double jump is available!</p>
-            <div className="border-t border-foreground/20 pt-3 mt-3">
-              <p className="text-muted-foreground">Table: <span className="text-neon-cyan">{table_name}</span></p>
+
+          {/* Live demo canvas */}
+          <div className="relative w-full border-2 border-neon-green/30 rounded overflow-hidden"
+            style={{ boxShadow: "0 0 24px hsl(var(--neon-green) / 0.12)" }}>
+            <GameDemoCanvas />
+            {/* Overlay hints */}
+            <div className="absolute inset-0 pointer-events-none flex flex-col justify-end pb-3 px-4 gap-1">
+              <div className="flex items-center gap-3">
+                <span className="font-pixel text-neon-green text-xs"
+                  style={{ textShadow: "0 0 8px hsl(var(--neon-green))" }}>
+                  SPACE / TAP = JUMP
+                </span>
+                <span className="font-pixel text-neon-yellow text-xs"
+                  style={{ textShadow: "0 0 8px hsl(var(--neon-yellow))" }}>
+                  ★ = POINTS
+                </span>
+                <span className="font-pixel text-muted-foreground text-xs">
+                  TABLE: <span className="text-neon-cyan">{table_name}</span>
+                </span>
+              </div>
             </div>
           </div>
+
           <button
             onClick={startGame}
-            className="font-pixel text-sm px-8 py-4 bg-neon-green text-background rounded hover:brightness-125 transition-all"
+            className="font-pixel text-sm px-10 py-4 bg-neon-green text-background rounded hover:brightness-125 transition-all"
             style={{ boxShadow: "0 0 20px hsl(var(--neon-green) / 0.5)" }}
           >
             START GAME
