@@ -53,6 +53,8 @@ const GamePage = () => {
   const [maxTime] = useState(90);
   const waitTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const gameStartRef = useRef<number>(0);
+  const [evoFlash, setEvoFlash] = useState<{ name: string; color: string; key: number } | null>(null);
+  const evoFlashTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const goToResult = useCallback((finalScore: number) => {
     navigate(`/webview/games/result?score=${finalScore}`);
