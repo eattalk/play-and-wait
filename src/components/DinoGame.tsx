@@ -559,10 +559,10 @@ const DinoGame = ({ playing, maxTime, onScoreChange, onTimeChange, onGameOver }:
     }
 
     function spawnWave() {
-      const isBird = s.speed > 420 && Math.random() < 0.35;
-      const h = isBird ? 20 : Math.random() * 35 + 28;
-      const y = isBird ? GROUND_Y - DINO_H - 8 - Math.random() * 35 : GROUND_Y - h;
-      s.obstacles.push({ x: CANVAS_W + 10, w: isBird ? 44 : 36, h, type: isBird ? "bird" : "cactus", y, passed: false });
+      // 선인장 장애물만 생성 (bird 제거)
+      const h = Math.random() * 35 + 28;
+      const y = GROUND_Y - h;
+      s.obstacles.push({ x: CANVAS_W + 10, w: 36, h, type: "cactus", y, passed: false });
       if (s.speed > 500 && Math.random() < 0.4) {
         const gap = 60 + Math.random() * 44;
         const h2 = Math.random() * 28 + 28;
