@@ -223,7 +223,7 @@ const DinoGame = ({ playing, maxTime, onScoreChange, onTimeChange, onGameOver }:
 
     const s = stateRef.current;
     Object.assign(s, {
-      dy: GROUND_Y - DINO_H, dvy: 0, wasOnGround: true, jumpsLeft: 1,
+      dy: GROUND_Y - DINO_H, dvy: 0, wasOnGround: true, jumpsLeft: 1, jumpHeld: false,
       obstacles: [], stars: [], dust: [], score: 0, scoreExact: 0, speed: BASE_SPEED,
       elapsed: 0, legF: 0, wingT: 0, gameOver: false,
       clouds: [{ x: 280, y: 44, w: 90 }, { x: 680, y: 60, w: 75 }],
