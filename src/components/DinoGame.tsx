@@ -556,8 +556,13 @@ const DinoGame = ({ playing, maxTime, onScoreChange, onTimeChange, onGameOver }:
     }
 
     function randomObsInterval() {
-      const base = Math.max(0.35, 1.2 - (s.speed - BASE_SPEED) / 320);
-      return base * (0.45 + Math.random() * 0.75);
+      // 점프 체공시간(≈0.70s) + 착지후 반응 여유(0.35s) = 최소 1.05s 보장
+      // 어떤 속도에서도 착지 → 재점프로 반드시 피할 수 있음
+      const jumpAirTime = (Math.abs(JUMP_VEL) * 2) / GRAVITY; // ~0.698s
+      const MIN_SAFE = jumpAirTime + 0.35;                      // ~1.05s
+      const base = 1.6 - (s.speed - BASE_SPEED) / 280;
+      const raw  = base * (0.75 + Math.random() * 0.5);
+      return Math.max(MIN_SAFE, raw);
     }
 
     function spawnWave() {
