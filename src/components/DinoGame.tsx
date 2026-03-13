@@ -569,8 +569,8 @@ const DinoGame = ({ playing, maxTime, onScoreChange, onTimeChange, onGameOver }:
     }
 
     function randomObsInterval() {
-      const base = Math.max(0.45, 1.3 - (s.speed - BASE_SPEED) / 400);
-      return base * (0.5 + Math.random() * 0.9);
+      const base = Math.max(0.35, 1.2 - (s.speed - BASE_SPEED) / 320);
+      return base * (0.45 + Math.random() * 0.75);
     }
 
     function spawnWave() {
