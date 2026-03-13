@@ -778,10 +778,14 @@ const DinoGame = ({ playing, maxTime, onScoreChange, onTimeChange, onGameOver }:
     }
 
     function spawnStar() {
+      // Weighted random point value from varied table — prevents uniform scoring
+      const ptIdx = Math.floor(Math.random() * STAR_POINT_TABLE.length);
+      const pts = STAR_POINT_TABLE[ptIdx];
+      const isBig = pts >= 5;
       s.stars.push({
         x: CANVAS_W + 10, y: GROUND_Y - 48 - Math.random() * 82,
-        radius: Math.random() < 0.2 ? 18 : 12,
-        points: Math.random() < 0.2 ? 5 : 1, angle: 0,
+        radius: isBig ? 18 : pts >= 3 ? 15 : 12,
+        points: pts, angle: 0,
       });
     }
 
