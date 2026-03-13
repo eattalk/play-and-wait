@@ -672,7 +672,9 @@ const DinoGame = ({ playing, maxTime, onScoreChange, onTimeChange, onGameOver }:
             s.transformFlash = 1.0;
             createTransformSound(getAudio(), newLevel);
           }
-          const passBonus = (s.speed / 1000) * (0.3 + Math.random() * 0.4);
+          // 장애물 통과 보너스: 속도 + 경과시간 솔트 → 절대 동점 불가
+          const passBonus = (s.speed / 900) * (0.4 + Math.random() * 0.5)
+            + s.elapsed * 0.007 * (0.8 + Math.random() * 0.4);
           s.scoreExact += passBonus;
           s.score = Math.round(s.scoreExact);
           onScoreChange(s.score);
