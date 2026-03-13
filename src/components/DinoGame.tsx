@@ -611,15 +611,24 @@ const DinoGame = ({ playing, maxTime, onScoreChange, onTimeChange, onGameOver }:
         s.gameOver = true; createHitSound(getAudio()); onGameOver(s.score); return;
       }
 
-      s.speed = BASE_SPEED + s.elapsed * SPEED_RAMP;
-      const speedTier = Math.floor((s.speed - BASE_SPEED) / 100);
+      // 지수형 가속: 초반 완만, 중반부터 급격히 빨라짐
+      // speed = BASE + 선형(t*18) + 지수(e^(t/30)-1)*120
+      s.speed = BASE_SPEED
+        + s.elapsed * 18
+        + (Math.exp(s.elapsed / 30) - 1) * 120;
+
+      const speedTier = Math.floor((s.speed - BASE_SPEED) / 80);
       if (speedTier > s.lastSpeedTier) { createSpeedUpSound(getAudio()); s.lastSpeedTier = speedTier; }
 
-      // Survival time bonus
+      // 공동점수 방지: 매 프레임 극소량의 난수 보너스 (플레이어마다 다른 누적값)
+      s.scoreExact += dt * 0.004 * Math.random();
+
+      // 매 초 생존 보너스 (속도 비례 + 시간 솔트)
       const survSecond = Math.floor(s.elapsed);
       if (survSecond > s.lastSurvivalBonus) {
         s.lastSurvivalBonus = survSecond;
-        const microBonus = (s.speed / BASE_SPEED) * (0.03 + Math.random() * 0.05);
+        const microBonus = (s.speed / BASE_SPEED) * (0.07 + Math.random() * 0.11)
+          + s.elapsed * 0.003 * Math.random(); // 시간이 길수록 격차 커짐
         s.scoreExact += microBonus;
         s.score = Math.round(s.scoreExact);
         onScoreChange(s.score);
@@ -663,7 +672,9 @@ const DinoGame = ({ playing, maxTime, onScoreChange, onTimeChange, onGameOver }:
             s.transformFlash = 1.0;
             createTransformSound(getAudio(), newLevel);
           }
-          const passBonus = (s.speed / 1000) * (0.3 + Math.random() * 0.4);
+          // 장애물 통과 보너스: 속도 + 경과시간 솔트 → 절대 동점 불가
+          const passBonus = (s.speed / 900) * (0.4 + Math.random() * 0.5)
+            + s.elapsed * 0.007 * (0.8 + Math.random() * 0.4);
           s.scoreExact += passBonus;
           s.score = Math.round(s.scoreExact);
           onScoreChange(s.score);
