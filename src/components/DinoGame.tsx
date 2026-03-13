@@ -153,6 +153,7 @@ const DinoGame = ({ playing, maxTime, onScoreChange, onTimeChange, onGameOver }:
     dy: GROUND_Y - DINO_H, dvy: 0,
     wasOnGround: true,
     jumpsLeft: 1,
+    jumpHeld: false,
     obstacles: [] as Obstacle[],
     stars: [] as StarObj[],
     clouds: [] as Cloud[],
