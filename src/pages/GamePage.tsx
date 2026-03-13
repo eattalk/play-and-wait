@@ -16,7 +16,6 @@ function playCountdownBeep(n: number) {
     const gain = ctx.createGain();
     osc.connect(gain); gain.connect(ctx.destination);
     if (n === 0) {
-      // GO! – rising fanfare
       osc.type = "square";
       osc.frequency.setValueAtTime(440, ctx.currentTime);
       osc.frequency.setValueAtTime(660, ctx.currentTime + 0.07);
@@ -25,9 +24,8 @@ function playCountdownBeep(n: number) {
       gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.4);
       osc.start(ctx.currentTime); osc.stop(ctx.currentTime + 0.4);
     } else {
-      // 3, 2, 1 – descending tick
       osc.type = "sine";
-      const freq = 330 + n * 110; // 3→660, 2→550, 1→440
+      const freq = 330 + n * 110;
       osc.frequency.setValueAtTime(freq, ctx.currentTime);
       osc.frequency.exponentialRampToValueAtTime(freq * 0.9, ctx.currentTime + 0.12);
       gain.gain.setValueAtTime(0.28, ctx.currentTime);
@@ -53,8 +51,11 @@ const GamePage = () => {
   const [maxTime] = useState(90);
   const waitTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const gameStartRef = useRef<number>(0);
+
+  // Evolution flash overlay state
   const [evoFlash, setEvoFlash] = useState<{ name: string; color: string; key: number } | null>(null);
   const evoFlashTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [evoVisible, setEvoVisible] = useState(false);
 
   const goToResult = useCallback((finalScore: number) => {
     navigate(`/webview/games/result?score=${finalScore}`);
@@ -87,19 +88,32 @@ const GamePage = () => {
     }, waitMs);
   }, [maxTime, goToResult]);
 
-  // Hard max time enforcement
+  const handleEvolve = useCallback((level: number, name: string) => {
+    // Clear any existing flash
+    if (evoFlashTimerRef.current) clearTimeout(evoFlashTimerRef.current);
+
+    const color = EVO_COLORS[level] ?? "#ffffff";
+    setEvoFlash({ name, color, key: Date.now() });
+    setEvoVisible(true);
+
+    // Fade out after 1.4s
+    evoFlashTimerRef.current = setTimeout(() => {
+      setEvoVisible(false);
+      setTimeout(() => setEvoFlash(null), 400);
+    }, 1400);
+  }, []);
+
   useEffect(() => {
     if (phase !== "playing") return;
     const hardMax = (maxTime + MAX_TIME_BUFFER) * 1000;
-    const t = setTimeout(() => {
-      // force game over after hard max
-    }, hardMax);
+    const t = setTimeout(() => {}, hardMax);
     return () => clearTimeout(t);
   }, [phase, maxTime]);
 
   useEffect(() => {
     return () => {
       if (waitTimerRef.current) clearTimeout(waitTimerRef.current);
+      if (evoFlashTimerRef.current) clearTimeout(evoFlashTimerRef.current);
     };
   }, []);
 
@@ -129,6 +143,76 @@ const GamePage = () => {
         ))}
       </div>
 
+      {/* ── Evolution Flash Overlay ── */}
+      {evoFlash && (
+        <div
+          key={evoFlash.key}
+          className="absolute inset-0 z-50 pointer-events-none flex items-center justify-center"
+          style={{
+            background: `radial-gradient(ellipse at center, ${evoFlash.color}22 0%, transparent 70%)`,
+            transition: "opacity 0.4s ease-out",
+            opacity: evoVisible ? 1 : 0,
+          }}
+        >
+          {/* Horizontal scan lines */}
+          <div
+            className="absolute inset-0"
+            style={{
+              background: `repeating-linear-gradient(0deg, transparent, transparent 3px, ${evoFlash.color}18 3px, ${evoFlash.color}18 4px)`,
+              opacity: evoVisible ? 0.6 : 0,
+              transition: "opacity 0.4s ease-out",
+            }}
+          />
+
+          {/* Border flash */}
+          <div
+            className="absolute inset-0"
+            style={{
+              border: `3px solid ${evoFlash.color}`,
+              boxShadow: `inset 0 0 60px ${evoFlash.color}44, 0 0 60px ${evoFlash.color}66`,
+              opacity: evoVisible ? 1 : 0,
+              transition: "opacity 0.4s ease-out",
+              borderRadius: "0",
+            }}
+          />
+
+          {/* Main text */}
+          <div
+            className="relative flex flex-col items-center gap-2"
+            style={{
+              opacity: evoVisible ? 1 : 0,
+              transform: evoVisible ? "scale(1)" : "scale(0.8)",
+              transition: "opacity 0.35s ease-out, transform 0.35s ease-out",
+            }}
+          >
+            <div
+              className="font-pixel tracking-widest"
+              style={{
+                fontSize: "clamp(1.5rem, 5vw, 3.5rem)",
+                color: evoFlash.color,
+                textShadow: `0 0 30px ${evoFlash.color}, 0 0 60px ${evoFlash.color}88`,
+                letterSpacing: "0.12em",
+                lineHeight: 1.1,
+              }}
+            >
+              {evoFlash.name}
+            </div>
+            <div
+              className="font-pixel tracking-widest"
+              style={{
+                fontSize: "clamp(0.7rem, 2vw, 1.1rem)",
+                color: "#ffffff",
+                textShadow: `0 0 16px ${evoFlash.color}`,
+                letterSpacing: "0.3em",
+                opacity: 0.9,
+              }}
+            >
+              ★ EVOLVED! ★
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Instructions Screen */}
       {phase === "instructions" && (
         <div className="relative z-10 flex flex-col items-center gap-5 px-4 w-full max-w-2xl">
@@ -140,7 +224,6 @@ const GamePage = () => {
           <div className="relative w-full border-2 border-neon-green/30 rounded overflow-hidden"
             style={{ boxShadow: "0 0 24px hsl(var(--neon-green) / 0.12)" }}>
             <GameDemoCanvas />
-            {/* Overlay hints */}
             <div className="absolute inset-0 pointer-events-none flex flex-col justify-end pb-3 px-4 gap-1">
               <div className="flex items-center gap-3">
                 <span className="font-pixel text-neon-green text-xs"
@@ -202,6 +285,7 @@ const GamePage = () => {
             onScoreChange={setScore}
             onTimeChange={setGameTime}
             onGameOver={handleGameOver}
+            onEvolve={handleEvolve}
           />
 
           {phase === "waiting" && (
