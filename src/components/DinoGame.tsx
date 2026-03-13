@@ -153,7 +153,6 @@ const DinoGame = ({ playing, maxTime, onScoreChange, onTimeChange, onGameOver }:
     dy: GROUND_Y - DINO_H, dvy: 0,
     wasOnGround: true,
     jumpsLeft: 1,
-    jumpHeld: false,
     obstacles: [] as Obstacle[],
     stars: [] as StarObj[],
     clouds: [] as Cloud[],
@@ -184,10 +183,9 @@ const DinoGame = ({ playing, maxTime, onScoreChange, onTimeChange, onGameOver }:
     return audioCtxRef.current;
   }, []);
 
-  const jumpStart = useCallback(() => {
+  const jump = useCallback(() => {
     const s = stateRef.current;
     if (s.gameOver || !playingRef.current) return;
-    s.jumpHeld = true;
     if (s.jumpsLeft > 0) {
       s.dvy = JUMP_VEL; s.jumpsLeft = 0;
       createJumpSound(getAudio());
@@ -197,24 +195,13 @@ const DinoGame = ({ playing, maxTime, onScoreChange, onTimeChange, onGameOver }:
     }
   }, [getAudio]);
 
-  const jumpEnd = useCallback(() => {
-    const s = stateRef.current;
-    s.jumpHeld = false;
-    // 짧게 뗐을 때 상승 중이면 즉시 속도를 줄여 낮은 점프 구현
-    if (s.dvy < 0) s.dvy *= 0.38;
-  }, []);
-
   useEffect(() => {
     const onDown = (e: KeyboardEvent) => {
-      if (e.code === "Space" || e.code === "ArrowUp") { e.preventDefault(); if (!e.repeat) jumpStart(); }
-    };
-    const onUp = (e: KeyboardEvent) => {
-      if (e.code === "Space" || e.code === "ArrowUp") { e.preventDefault(); jumpEnd(); }
+      if ((e.code === "Space" || e.code === "ArrowUp") && !e.repeat) { e.preventDefault(); jump(); }
     };
     window.addEventListener("keydown", onDown);
-    window.addEventListener("keyup", onUp);
-    return () => { window.removeEventListener("keydown", onDown); window.removeEventListener("keyup", onUp); };
-  }, [jumpStart, jumpEnd]);
+    return () => window.removeEventListener("keydown", onDown);
+  }, [jump]);
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -636,10 +623,9 @@ const DinoGame = ({ playing, maxTime, onScoreChange, onTimeChange, onGameOver }:
       s.wingT += dt;
       if (s.transformFlash > 0) s.transformFlash = Math.max(0, s.transformFlash - dt * 2.2);
 
-      // Physics — 홀드 중 상승 시 중력 완화(높은 점프), 뗐을 때 빠르게 감소(짧은 점프)
+      // Physics
       const wasOnGround = s.dy >= GROUND_Y - DINO_H - 2;
-      const gravMult = (s.jumpHeld && s.dvy < 0) ? 0.42 : 1.0;
-      s.dvy += GRAVITY * gravMult * dt;
+      s.dvy += GRAVITY * dt;
       s.dy  += s.dvy * dt;
       const nowOnGround = s.dy >= GROUND_Y - DINO_H;
       if (nowOnGround) {
@@ -783,11 +769,8 @@ const DinoGame = ({ playing, maxTime, onScoreChange, onTimeChange, onGameOver }:
     <div
       className="relative border-2 border-neon-green/40 rounded overflow-hidden cursor-pointer w-full select-none"
       style={{ boxShadow: "0 0 30px hsl(var(--neon-green) / 0.15)" }}
-      onMouseDown={jumpStart}
-      onMouseUp={jumpEnd}
-      onMouseLeave={jumpEnd}
-      onTouchStart={e => { e.preventDefault(); jumpStart(); }}
-      onTouchEnd={e => { e.preventDefault(); jumpEnd(); }}
+      onClick={jump}
+      onTouchStart={e => { e.preventDefault(); jump(); }}
     >
       {/* Canvas scales to fill container width, preserving aspect ratio */}
       <canvas
