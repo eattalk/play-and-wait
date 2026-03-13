@@ -662,6 +662,7 @@ const DinoGame = ({ playing, maxTime, onScoreChange, onTimeChange, onGameOver, o
             s.evoLevel = newLevel;
             s.transformFlash = 1.0;
             createTransformSound(getAudio(), newLevel);
+            onEvolve?.(newLevel, EVO[newLevel].name);
           }
         }
         return ob.x > -100;
