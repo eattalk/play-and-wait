@@ -769,11 +769,8 @@ const DinoGame = ({ playing, maxTime, onScoreChange, onTimeChange, onGameOver }:
     <div
       className="relative border-2 border-neon-green/40 rounded overflow-hidden cursor-pointer w-full select-none"
       style={{ boxShadow: "0 0 30px hsl(var(--neon-green) / 0.15)" }}
-      onMouseDown={jumpStart}
-      onMouseUp={jumpEnd}
-      onMouseLeave={jumpEnd}
-      onTouchStart={e => { e.preventDefault(); jumpStart(); }}
-      onTouchEnd={e => { e.preventDefault(); jumpEnd(); }}
+      onClick={jump}
+      onTouchStart={e => { e.preventDefault(); jump(); }}
     >
       {/* Canvas scales to fill container width, preserving aspect ratio */}
       <canvas
