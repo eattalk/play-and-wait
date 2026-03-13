@@ -10,7 +10,6 @@ function playCountdownBeep(n: number) {
     const gain = ctx.createGain();
     osc.connect(gain); gain.connect(ctx.destination);
     if (n === 0) {
-      // GO! – rising fanfare
       osc.type = "square";
       osc.frequency.setValueAtTime(440, ctx.currentTime);
       osc.frequency.setValueAtTime(660, ctx.currentTime + 0.07);
@@ -19,9 +18,8 @@ function playCountdownBeep(n: number) {
       gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.4);
       osc.start(ctx.currentTime); osc.stop(ctx.currentTime + 0.4);
     } else {
-      // 3, 2, 1 – descending tick
       osc.type = "sine";
-      const freq = 330 + n * 110; // 3→660, 2→550, 1→440
+      const freq = 330 + n * 110;
       osc.frequency.setValueAtTime(freq, ctx.currentTime);
       osc.frequency.exponentialRampToValueAtTime(freq * 0.9, ctx.currentTime + 0.12);
       gain.gain.setValueAtTime(0.28, ctx.currentTime);
@@ -69,133 +67,135 @@ const GamePage = () => {
   const handleGameOver = useCallback((finalScore: number) => {
     setScore(finalScore);
     setPhase("waiting");
-
     const elapsed = (Date.now() - gameStartRef.current) / 1000;
     const remaining = maxTime + MAX_TIME_BUFFER - elapsed;
     const waitMs = Math.max(0, remaining * 1000);
-
-    waitTimerRef.current = setTimeout(() => {
-      goToResult(finalScore);
-    }, waitMs);
+    waitTimerRef.current = setTimeout(() => { goToResult(finalScore); }, waitMs);
   }, [maxTime, goToResult]);
 
-  // Hard max time enforcement
   useEffect(() => {
     if (phase !== "playing") return;
     const hardMax = (maxTime + MAX_TIME_BUFFER) * 1000;
-    const t = setTimeout(() => {
-      // force game over after hard max
-    }, hardMax);
+    const t = setTimeout(() => {}, hardMax);
     return () => clearTimeout(t);
   }, [phase, maxTime]);
 
   useEffect(() => {
-    return () => {
-      if (waitTimerRef.current) clearTimeout(waitTimerRef.current);
-    };
+    return () => { if (waitTimerRef.current) clearTimeout(waitTimerRef.current); };
   }, []);
 
   const formatTime = (ms: number) => {
     const total = Math.floor(ms / 1000);
-    const h = Math.floor(total / 3600).toString().padStart(2, "0");
-    const m = Math.floor((total % 3600) / 60).toString().padStart(2, "0");
+    const m = Math.floor(total / 60).toString().padStart(2, "0");
     const s = (total % 60).toString().padStart(2, "0");
-    return `${h}:${m}:${s}`;
+    return `${m}:${s}`;
   };
 
   return (
-    <div className="min-h-screen bg-background flex flex-col items-center justify-center relative overflow-hidden">
+    // Full-screen layout — fills the 1200×800 tablet viewport
+    <div className="h-screen bg-background flex flex-col overflow-hidden relative">
+
       {/* Stars background */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
-        {Array.from({ length: 60 }).map((_, i) => (
+        {Array.from({ length: 70 }).map((_, i) => (
           <div
             key={i}
             className="absolute rounded-full bg-foreground opacity-30"
             style={{
               width: Math.random() * 2 + 1 + "px",
               height: Math.random() * 2 + 1 + "px",
-              top: Math.random() * 60 + "%",
+              top: Math.random() * 100 + "%",
               left: Math.random() * 100 + "%",
             }}
           />
         ))}
       </div>
 
-      {/* Instructions Screen */}
+      {/* ── Instructions ── */}
       {phase === "instructions" && (
-        <div className="relative z-10 flex flex-col items-center gap-5 px-4 w-full max-w-2xl">
-          <h1 className="font-pixel text-neon-green text-lg" style={{ textShadow: "0 0 20px hsl(var(--neon-green))" }}>
+        <div className="relative z-10 flex flex-col items-center justify-center flex-1 gap-4 px-6">
+          <h1
+            className="font-pixel text-neon-green"
+            style={{ fontSize: "clamp(1rem, 2.5vw, 1.6rem)", textShadow: "0 0 24px hsl(var(--neon-green))" }}
+          >
             DINO STAR RUSH
           </h1>
 
-          {/* Live demo canvas */}
-          <div className="relative w-full border-2 border-neon-green/30 rounded overflow-hidden"
-            style={{ boxShadow: "0 0 24px hsl(var(--neon-green) / 0.12)" }}>
+          {/* Demo — fills most of the width */}
+          <div
+            className="w-full border-2 border-neon-green/30 rounded overflow-hidden"
+            style={{ maxWidth: "960px", boxShadow: "0 0 28px hsl(var(--neon-green) / 0.12)" }}
+          >
             <GameDemoCanvas />
-            {/* Overlay hints */}
-            <div className="absolute inset-0 pointer-events-none flex flex-col justify-end pb-3 px-4 gap-1">
-              <div className="flex items-center gap-3">
-                <span className="font-pixel text-neon-green text-xs"
-                  style={{ textShadow: "0 0 8px hsl(var(--neon-green))" }}>
-                  SPACE / TAP = JUMP
-                </span>
-                <span className="font-pixel text-neon-yellow text-xs"
-                  style={{ textShadow: "0 0 8px hsl(var(--neon-yellow))" }}>
-                  ★ = POINTS
-                </span>
-                <span className="font-pixel text-muted-foreground text-xs">
-                  TABLE: <span className="text-neon-cyan">{table_name}</span>
-                </span>
-              </div>
-            </div>
+          </div>
+
+          {/* Hints row */}
+          <div className="flex items-center gap-6">
+            <span className="font-pixel text-neon-green text-xs" style={{ textShadow: "0 0 8px hsl(var(--neon-green))" }}>
+              SPACE / TAP = JUMP
+            </span>
+            <span className="font-pixel text-neon-yellow text-xs" style={{ textShadow: "0 0 8px hsl(var(--neon-yellow))" }}>
+              ★ = POINTS
+            </span>
+            <span className="font-pixel text-muted-foreground text-xs">
+              TABLE: <span className="text-neon-cyan">{table_name}</span>
+            </span>
           </div>
 
           <button
             onClick={startGame}
-            className="font-pixel text-sm px-10 py-4 bg-neon-green text-background rounded hover:brightness-125 transition-all"
-            style={{ boxShadow: "0 0 20px hsl(var(--neon-green) / 0.5)" }}
+            className="font-pixel px-12 py-4 bg-neon-green text-background rounded hover:brightness-125 transition-all"
+            style={{ fontSize: "clamp(0.7rem, 1.5vw, 1rem)", boxShadow: "0 0 24px hsl(var(--neon-green) / 0.5)" }}
           >
             START GAME
           </button>
         </div>
       )}
 
-      {/* Countdown */}
+      {/* ── Countdown ── */}
       {phase === "countdown" && (
-        <div className="relative z-10 flex flex-col items-center gap-4">
-          <p className="font-pixel text-muted-foreground text-sm">GET READY</p>
+        <div className="relative z-10 flex flex-col items-center justify-center flex-1 gap-4">
+          <p className="font-pixel text-muted-foreground text-sm tracking-widest">GET READY</p>
           <div
             className="font-pixel text-neon-green"
-            style={{ fontSize: "6rem", textShadow: "0 0 40px hsl(var(--neon-green))", animation: "pulse 0.8s ease-in-out" }}
+            style={{ fontSize: "clamp(5rem, 14vw, 9rem)", textShadow: "0 0 48px hsl(var(--neon-green))", animation: "pulse 0.8s ease-in-out" }}
           >
             {countdown === 0 ? "GO!" : countdown}
           </div>
         </div>
       )}
 
-      {/* Game */}
+      {/* ── Game ── */}
       {(phase === "playing" || phase === "waiting") && (
-        <div className="relative z-10 w-full flex flex-col items-center gap-4">
-          <div className="flex items-center justify-between w-full max-w-2xl px-4">
-            <div className="font-pixel text-neon-yellow text-xs">
+        <div className="relative z-10 flex flex-col flex-1 overflow-hidden">
+
+          {/* HUD bar */}
+          <div className="flex items-center justify-between px-6 py-2 shrink-0">
+            <div className="font-pixel text-neon-yellow" style={{ fontSize: "clamp(0.6rem, 1.2vw, 0.85rem)" }}>
               SCORE: <span className="text-neon-green">{score}</span>
             </div>
-            <div className="font-pixel text-xs text-muted-foreground">
+            <div className="font-pixel text-muted-foreground" style={{ fontSize: "clamp(0.6rem, 1.2vw, 0.85rem)" }}>
               {formatTime(gameTime)}
             </div>
-            <div className="font-pixel text-xs text-muted-foreground">
+            <div className="font-pixel text-muted-foreground" style={{ fontSize: "clamp(0.6rem, 1.2vw, 0.85rem)" }}>
               TABLE: <span className="text-neon-cyan">{table_name}</span>
             </div>
           </div>
 
-          <DinoGame
-            playing={phase === "playing"}
-            maxTime={maxTime}
-            onScoreChange={setScore}
-            onTimeChange={setGameTime}
-            onGameOver={handleGameOver}
-          />
+          {/* Game canvas — centred, fills available width */}
+          <div className="flex-1 flex items-center justify-center px-4 pb-4">
+            <div className="w-full" style={{ maxWidth: "1100px" }}>
+              <DinoGame
+                playing={phase === "playing"}
+                maxTime={maxTime}
+                onScoreChange={setScore}
+                onTimeChange={setGameTime}
+                onGameOver={handleGameOver}
+              />
+            </div>
+          </div>
 
+          {/* Game over overlay */}
           {phase === "waiting" && (
             <div className="absolute inset-0 flex items-center justify-center bg-background/70 z-20">
               <div className="font-pixel text-center space-y-4 p-8 border border-neon-green/40 rounded bg-card/90">
