@@ -3,34 +3,38 @@ import { useEffect, useRef, useState, useCallback } from "react";
 import DinoGame from "@/components/DinoGame";
 import GameDemoCanvas from "@/components/GameDemoCanvas";
 
-const MAX_TIME_BUFFER = 15; // seconds buffer after game ends
-
-const GamePage = () => {
-  const { game_type } = useParams();
-  const [searchParams] = useSearchParams();
-  const navigate = useNavigate();
-  const table_name = searchParams.get("table_name") || "table1";
-
-  const [phase, setPhase] = useState<"instructions" | "countdown" | "playing" | "waiting">("instructions");
-  const [countdown, setCountdown] = useState(3);
-  const [score, setScore] = useState(0);
-  const [gameTime, setGameTime] = useState(0); // elapsed ms
-  const [maxTime] = useState(90); // 90 seconds total game time (game_type could configure this)
-  const waitTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const gameStartRef = useRef<number>(0);
-
-  const goToResult = useCallback((finalScore: number) => {
-    navigate(`/webview/games/result?score=${finalScore}`);
-  }, [navigate]);
-
-  // Start countdown
-  const startGame = () => {
-    setPhase("countdown");
-    setCountdown(3);
-  };
+function playCountdownBeep(n: number) {
+  try {
+    const ctx = new (window.AudioContext || (window as any).webkitAudioContext)();
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.connect(gain); gain.connect(ctx.destination);
+    if (n === 0) {
+      // GO! – rising fanfare
+      osc.type = "square";
+      osc.frequency.setValueAtTime(440, ctx.currentTime);
+      osc.frequency.setValueAtTime(660, ctx.currentTime + 0.07);
+      osc.frequency.setValueAtTime(880, ctx.currentTime + 0.14);
+      gain.gain.setValueAtTime(0.22, ctx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.4);
+      osc.start(ctx.currentTime); osc.stop(ctx.currentTime + 0.4);
+    } else {
+      // 3, 2, 1 – descending tick
+      osc.type = "sine";
+      const freq = 330 + n * 110; // 3→660, 2→550, 1→440
+      osc.frequency.setValueAtTime(freq, ctx.currentTime);
+      osc.frequency.exponentialRampToValueAtTime(freq * 0.9, ctx.currentTime + 0.12);
+      gain.gain.setValueAtTime(0.28, ctx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.18);
+      osc.start(ctx.currentTime); osc.stop(ctx.currentTime + 0.18);
+    }
+    setTimeout(() => ctx.close(), 1000);
+  } catch (_) { /* ignore */ }
+}
 
   useEffect(() => {
     if (phase !== "countdown") return;
+    playCountdownBeep(countdown);
     if (countdown <= 0) {
       setPhase("playing");
       gameStartRef.current = Date.now();
