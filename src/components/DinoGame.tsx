@@ -149,6 +149,9 @@ interface StarObj  { x: number; y: number; radius: number; points: number; angle
 interface Cloud    { x: number; y: number; w: number; }
 interface Dust     { x: number; y: number; life: number; vx: number; vy: number; }
 
+// Star point values — varied to minimize ties
+const STAR_POINT_TABLE = [1, 1, 2, 2, 3, 5, 7, 10];
+
 // ─── Component ────────────────────────────────────────────────────────────────
 const DinoGame = ({ playing, maxTime, onScoreChange, onTimeChange, onGameOver }: DinoGameProps) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -160,7 +163,9 @@ const DinoGame = ({ playing, maxTime, onScoreChange, onTimeChange, onGameOver }:
     stars: [] as StarObj[],
     clouds: [] as Cloud[],
     dust: [] as Dust[],
-    score: 0, speed: BASE_SPEED, elapsed: 0,
+    score: 0,           // integer display score
+    scoreExact: 0,      // precise fractional score (used internally)
+    speed: BASE_SPEED, elapsed: 0,
     legF: 0, wingT: 0, gameOver: false,
     obsTimer: 0, nextObsInterval: 1.3,
     starTimer: 0, cloudTimer: 0,
@@ -169,6 +174,9 @@ const DinoGame = ({ playing, maxTime, onScoreChange, onTimeChange, onGameOver }:
     evoLevel: 0,
     transformFlash: 0,
     lastSpeedTier: 0,           // for speed-up sound trigger
+    comboStreak: 0,             // consecutive stars collected
+    lastComboTime: 0,           // time of last star collection
+    lastSurvivalBonus: 0,       // last elapsed second when survival bonus was awarded
   });
   const audioCtxRef = useRef<AudioContext | null>(null);
   const rafRef = useRef(0);
@@ -207,12 +215,13 @@ const DinoGame = ({ playing, maxTime, onScoreChange, onTimeChange, onGameOver }:
     const s = stateRef.current;
     Object.assign(s, {
       dy: GROUND_Y - DINO_H, dvy: 0, wasOnGround: true, jumpsLeft: 1,
-      obstacles: [], stars: [], dust: [], score: 0, speed: BASE_SPEED,
+      obstacles: [], stars: [], dust: [], score: 0, scoreExact: 0, speed: BASE_SPEED,
       elapsed: 0, legF: 0, wingT: 0, gameOver: false,
       clouds: [{ x: 200, y: 40, w: 80 }, { x: 520, y: 55, w: 65 }],
       obsTimer: 0, nextObsInterval: 1.3,
       starTimer: 0, cloudTimer: 0, lastTime: 0,
       obstaclesPassed: 0, evoLevel: 0, transformFlash: 0, lastSpeedTier: 0,
+      comboStreak: 0, lastComboTime: 0, lastSurvivalBonus: 0,
     });
 
     const ctx = canvas.getContext("2d")!;
@@ -623,6 +632,18 @@ const DinoGame = ({ playing, maxTime, onScoreChange, onTimeChange, onGameOver }:
       const speedTier = Math.floor((s.speed - BASE_SPEED) / 100);
       if (speedTier > s.lastSpeedTier) { createSpeedUpSound(getAudio()); s.lastSpeedTier = speedTier; }
 
+      // ── Survival time bonus: ~0.03~0.08 pts/sec scaled by speed ─────────────
+      // Gives fractional unique accumulation over time
+      const survSecond = Math.floor(s.elapsed);
+      if (survSecond > s.lastSurvivalBonus) {
+        s.lastSurvivalBonus = survSecond;
+        // micro bonus: speed ratio * random micro variance
+        const microBonus = (s.speed / BASE_SPEED) * (0.03 + Math.random() * 0.05);
+        s.scoreExact += microBonus;
+        s.score = Math.round(s.scoreExact);
+        onScoreChange(s.score);
+      }
+
       s.wingT += dt;
       if (s.transformFlash > 0) s.transformFlash = Math.max(0, s.transformFlash - dt * 2.2);
 
@@ -662,17 +683,37 @@ const DinoGame = ({ playing, maxTime, onScoreChange, onTimeChange, onGameOver }:
             s.transformFlash = 1.0;
             createTransformSound(getAudio(), newLevel);
           }
+          // ── Speed-based obstacle pass bonus (unique per pass, fractional) ──
+          // e.g. speed 300 → +0.3~0.5, speed 700 → +0.7~1.1
+          const passBonus = (s.speed / 1000) * (0.3 + Math.random() * 0.4);
+          s.scoreExact += passBonus;
+          s.score = Math.round(s.scoreExact);
+          onScoreChange(s.score);
         }
         return ob.x > -100;
       });
 
-      // Stars
+      // Stars — combo multiplier + varied point values
       s.stars = s.stars.filter(star => {
         star.x -= s.speed * dt; star.angle += STAR_SPIN * dt;
         if (Math.abs(star.x - (DINO_X + DINO_W / 2)) < star.radius + 16 &&
             Math.abs(star.y - (s.dy + DINO_H / 2))   < star.radius + 20) {
-          s.score += star.points; onScoreChange(s.score);
-          createStarSound(getAudio(), 0.8 + s.score * 0.02); // pitch rises with score
+          // Combo: within 2.5s of last star = combo streak
+          const comboWindow = 2.5;
+          if (s.elapsed - s.lastComboTime < comboWindow) {
+            s.comboStreak = Math.min(s.comboStreak + 1, 8);
+          } else {
+            s.comboStreak = 1;
+          }
+          s.lastComboTime = s.elapsed;
+          // combo multiplier: 1× up to 1.5× at streak 4, 2× at streak 7+
+          const comboMult = 1 + Math.min(s.comboStreak - 1, 7) * 0.15;
+          // exact fractional addition with tiny random salt to break ties
+          const starExact = star.points * comboMult + Math.random() * 0.09;
+          s.scoreExact += starExact;
+          s.score = Math.round(s.scoreExact);
+          onScoreChange(s.score);
+          createStarSound(getAudio(), 0.8 + s.comboStreak * 0.08);
           return false;
         }
         return star.x > -50;
@@ -737,10 +778,14 @@ const DinoGame = ({ playing, maxTime, onScoreChange, onTimeChange, onGameOver }:
     }
 
     function spawnStar() {
+      // Weighted random point value from varied table — prevents uniform scoring
+      const ptIdx = Math.floor(Math.random() * STAR_POINT_TABLE.length);
+      const pts = STAR_POINT_TABLE[ptIdx];
+      const isBig = pts >= 5;
       s.stars.push({
         x: CANVAS_W + 10, y: GROUND_Y - 48 - Math.random() * 82,
-        radius: Math.random() < 0.2 ? 18 : 12,
-        points: Math.random() < 0.2 ? 5 : 1, angle: 0,
+        radius: isBig ? 18 : pts >= 3 ? 15 : 12,
+        points: pts, angle: 0,
       });
     }
 
