@@ -117,7 +117,7 @@ const DINO_X = 100, DINO_W = 44, DINO_H = 52;
 const GRAVITY = 2520;
 const JUMP_VEL = -880;
 const BASE_SPEED = 280;
-const SPEED_RAMP = 12;
+const SPEED_RAMP = 22;
 const CLOUD_SPAWN_INTERVAL = 2.8;
 const STAR_SPAWN_INTERVAL = 1.1;
 const DUST_VX = 180, DUST_VY = -130, DUST_G = 360, DUST_DECAY = 2.8;
