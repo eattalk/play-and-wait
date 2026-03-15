@@ -464,20 +464,122 @@ const DinoGame = ({ playing, maxTime, onScoreChange, onTimeChange, onGameOver }:
       ctx.restore();
     }
 
+    // ── VOIDWING (lv 9): void portal wings + plasma tail ──────────────────────
+    function drawLevel9Voidwing(y: number, lf: number, wt: number, C: typeof EVO[0]) {
+      ctx.save();
+      // Void portal rings
+      for (let r = 0; r < 3; r++) {
+        const rad = 28 + r * 14 + Math.sin(wt * 5 + r) * 6;
+        const alpha = 0.18 - r * 0.04;
+        ctx.beginPath(); ctx.arc(DINO_X + DINO_W / 2, y + DINO_H / 2, rad, 0, Math.PI * 2);
+        ctx.strokeStyle = `rgba(255,60,200,${alpha})`; ctx.lineWidth = 3 - r * 0.5; ctx.stroke();
+      }
+      // Plasma tail
+      for (let i = 0; i < 8; i++) {
+        const tx = DINO_X - 10 - i * 8 + Math.sin(wt * 9 + i * 0.7) * 5;
+        const ty = y + DINO_H / 2 + Math.cos(wt * 7 + i * 0.9) * 7;
+        ctx.globalAlpha = 0.6 - i * 0.07;
+        ctx.fillStyle = i % 2 === 0 ? "#ff44aa" : "#aa00ff";
+        ctx.beginPath(); ctx.arc(tx, ty, 5 - i * 0.4, 0, Math.PI * 2); ctx.fill();
+      }
+      ctx.globalAlpha = 1;
+      // Wings
+      const ws = Math.sin(wt * 11) * 18;
+      ctx.fillStyle = C.acc; ctx.globalAlpha = 0.8;
+      ctx.beginPath();
+      ctx.moveTo(DINO_X + 4, y + 6); ctx.lineTo(DINO_X - 44, y - 10 + ws);
+      ctx.lineTo(DINO_X - 28, y + 14 + ws); ctx.lineTo(DINO_X + 4, y + 26); ctx.closePath(); ctx.fill();
+      ctx.beginPath();
+      ctx.moveTo(DINO_X + DINO_W - 4, y + 6); ctx.lineTo(DINO_X + DINO_W + 40, y - 12 + ws);
+      ctx.lineTo(DINO_X + DINO_W + 26, y + 12 + ws); ctx.lineTo(DINO_X + DINO_W - 4, y + 26); ctx.closePath(); ctx.fill();
+      ctx.globalAlpha = 1;
+      ctx.fillStyle = C.body;
+      ctx.fillRect(DINO_X, y, DINO_W, DINO_H - 10);
+      ctx.fillRect(DINO_X + 6, y - 20, 28, 24);
+      ctx.fillStyle = C.eye;
+      ctx.shadowColor = "#ff00cc"; ctx.shadowBlur = 18;
+      ctx.fillRect(DINO_X + 28, y - 15, 8, 8);
+      ctx.fillStyle = C.acc; ctx.fillRect(DINO_X + 32, y - 8, 12, 4);
+      ctx.fillStyle = C.body;
+      const lo = Math.sin(lf * 0.005) * 7;
+      ctx.fillRect(DINO_X + 4, y + DINO_H - 15, 13, 14 + lo);
+      ctx.fillRect(DINO_X + 24, y + DINO_H - 15, 13, 14 - lo);
+      ctx.restore();
+    }
+
+    // ── NEBULA REX (lv 10): galaxy nebula aura + crown + laser eye ────────────
+    function drawLevel10NebulaRex(y: number, lf: number, wt: number, C: typeof EVO[0]) {
+      ctx.save();
+      // Nebula spiral particles
+      for (let i = 0; i < 12; i++) {
+        const angle = wt * 2.5 + (i / 12) * Math.PI * 2;
+        const dist = 30 + Math.sin(wt * 3 + i) * 8;
+        const px = DINO_X + DINO_W / 2 + Math.cos(angle) * dist;
+        const py = y + DINO_H / 2 + Math.sin(angle) * dist * 0.5;
+        const hue = (wt * 80 + i * 30) % 360;
+        ctx.fillStyle = `hsla(${hue},100%,70%,0.6)`;
+        ctx.beginPath(); ctx.arc(px, py, 3.5, 0, Math.PI * 2); ctx.fill();
+      }
+      // Energy aura ring
+      const auraHue = (wt * 60) % 360;
+      ctx.strokeStyle = `hsla(${auraHue},100%,65%,0.5)`;
+      ctx.lineWidth = 4; ctx.shadowColor = `hsla(${auraHue},100%,65%,0.8)`; ctx.shadowBlur = 20;
+      ctx.beginPath(); ctx.arc(DINO_X + DINO_W / 2, y + DINO_H / 2, 36 + Math.sin(wt * 4) * 4, 0, Math.PI * 2); ctx.stroke();
+      ctx.shadowBlur = 0;
+      // Large wings
+      const ws = Math.sin(wt * 7) * 24;
+      ctx.fillStyle = `hsla(${auraHue},80%,65%,0.7)`;
+      ctx.beginPath();
+      ctx.moveTo(DINO_X + 4, y + 6); ctx.lineTo(DINO_X - 56, y - 14 + ws);
+      ctx.lineTo(DINO_X - 42, y + 10 + ws); ctx.lineTo(DINO_X - 20, y + 32 + ws * 0.4); ctx.lineTo(DINO_X + 4, y + 30); ctx.closePath(); ctx.fill();
+      ctx.beginPath();
+      ctx.moveTo(DINO_X + DINO_W - 4, y + 6); ctx.lineTo(DINO_X + DINO_W + 52, y - 16 + ws);
+      ctx.lineTo(DINO_X + DINO_W + 38, y + 8 + ws); ctx.lineTo(DINO_X + DINO_W + 16, y + 30 + ws * 0.4); ctx.lineTo(DINO_X + DINO_W - 4, y + 30); ctx.closePath(); ctx.fill();
+      // Body
+      ctx.shadowColor = C.glow; ctx.shadowBlur = 22;
+      ctx.fillStyle = C.body;
+      ctx.fillRect(DINO_X, y, DINO_W, DINO_H - 10);
+      ctx.fillRect(DINO_X + 4, y - 22, 36, 26);
+      // Glowing crown
+      const crownHue = (wt * 100) % 360;
+      ctx.fillStyle = `hsl(${crownHue},100%,65%)`;
+      ctx.shadowColor = `hsl(${crownHue},100%,65%)`; ctx.shadowBlur = 16;
+      [[8, 18],[16, 24],[22, 20],[30, 26],[36, 16]].forEach(([cx2, ch]) => {
+        ctx.fillRect(DINO_X + cx2, y - 22 - ch, 5, ch);
+      });
+      // Laser eye
+      ctx.fillStyle = "#ff0000"; ctx.shadowColor = "#ff0000"; ctx.shadowBlur = 20;
+      ctx.fillRect(DINO_X + 28, y - 16, 10, 10);
+      if (Math.sin(wt * 10) > 0) {
+        ctx.fillStyle = `hsl(${crownHue},100%,70%)`; ctx.globalAlpha = 0.9;
+        ctx.beginPath();
+        ctx.moveTo(DINO_X + 40, y - 10); ctx.lineTo(DINO_X + 90 + Math.sin(wt * 13) * 10, y - 5);
+        ctx.lineTo(DINO_X + 70, y + 2); ctx.closePath(); ctx.fill();
+        ctx.globalAlpha = 1;
+      }
+      ctx.fillStyle = C.body;
+      const lo = Math.sin(lf * 0.005) * 8;
+      ctx.fillRect(DINO_X + 4, y + DINO_H - 15, 14, 15 + lo);
+      ctx.fillRect(DINO_X + 24, y + DINO_H - 15, 14, 15 - lo);
+      ctx.restore();
+    }
+
     function drawDino(y: number, lf: number, wt: number, lv: number) {
       const C = EVO[lv];
       ctx.save(); applyEvoGlow(lv);
       switch (lv) {
-        case 0: drawLevel0(y, lf, C); break;
-        case 1: drawLevel1(y, lf, C); break;
-        case 2: drawLevel2(y, lf, wt, C); break;
-        case 3: drawLevel3(y, lf, C); break;
-        case 4: drawLevel4(y, lf, wt, C); break;
-        case 5: drawLevel5(y, lf, wt, C); break;
-        case 6: drawLevel6(y, lf, wt, C); break;
-        case 7: drawLevel7(y, lf, wt, C); break;
-        case 8: drawLevel8(y, lf, wt, C); break;
-        default: drawLevel9(y, lf, wt, C); break;
+        case 0:  drawLevel0(y, lf, C); break;
+        case 1:  drawLevel1(y, lf, C); break;
+        case 2:  drawLevel2(y, lf, wt, C); break;
+        case 3:  drawLevel3(y, lf, C); break;
+        case 4:  drawLevel4(y, lf, wt, C); break;
+        case 5:  drawLevel5(y, lf, wt, C); break;
+        case 6:  drawLevel6(y, lf, wt, C); break;
+        case 7:  drawLevel7(y, lf, wt, C); break;
+        case 8:  drawLevel8(y, lf, wt, C); break;
+        case 9:  drawLevel9Voidwing(y, lf, wt, C); break;
+        case 10: drawLevel10NebulaRex(y, lf, wt, C); break;
+        default: drawLevel9(y, lf, wt, C); break; // lv 11 = DRAGON GOD (existing)
       }
       ctx.restore();
     }
