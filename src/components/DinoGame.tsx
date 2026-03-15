@@ -670,18 +670,24 @@ const DinoGame = ({ playing, maxTime, onScoreChange, onTimeChange, onGameOver }:
     }
 
     function spawnWave() {
-      // 선인장 장애물만 생성 (bird 제거)
-      const h = Math.random() * 35 + 28;
-      const y = GROUND_Y - h;
-      s.obstacles.push({ x: CANVAS_W + 10, w: 36, h, type: "cactus", y, passed: false });
-      if (s.speed > 500 && Math.random() < 0.4) {
-        const gap = 60 + Math.random() * 44;
-        const h2 = Math.random() * 28 + 28;
+      const h = Math.random() * 38 + 26;
+      s.obstacles.push({ x: CANVAS_W + 10, w: 36, h, type: "cactus", y: GROUND_Y - h, passed: false });
+      // 속도 400 이상: 30% 확률로 쌍선인장
+      if (s.speed > 400 && Math.random() < 0.30) {
+        const gap = 58 + Math.random() * 40;
+        const h2 = Math.random() * 32 + 26;
         s.obstacles.push({ x: CANVAS_W + 10 + gap, w: 36, h: h2, type: "cactus", y: GROUND_Y - h2, passed: false });
       }
-      if (s.speed > 700 && Math.random() < 0.25) {
-        const h3 = Math.random() * 24 + 28;
-        s.obstacles.push({ x: CANVAS_W + 120 + Math.random() * 30, w: 36, h: h3, type: "cactus", y: GROUND_Y - h3, passed: false });
+      // 속도 600 이상: 40% 확률로 쌍선인장
+      if (s.speed > 600 && Math.random() < 0.40) {
+        const gap = 55 + Math.random() * 38;
+        const h2 = Math.random() * 34 + 26;
+        s.obstacles.push({ x: CANVAS_W + 10 + gap, w: 36, h: h2, type: "cactus", y: GROUND_Y - h2, passed: false });
+      }
+      // 속도 800 이상: 25% 확률로 3연속
+      if (s.speed > 800 && Math.random() < 0.25) {
+        const h3 = Math.random() * 28 + 26;
+        s.obstacles.push({ x: CANVAS_W + 110 + Math.random() * 28, w: 36, h: h3, type: "cactus", y: GROUND_Y - h3, passed: false });
       }
     }
 
