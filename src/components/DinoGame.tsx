@@ -111,32 +111,34 @@ function createTransformSound(ctx: AudioContext, level: number) {
 }
 
 // ─── Game constants — optimised for 1200×800 tablet landscape ─────────────────
-// Internal canvas resolution: wide enough to feel full-screen at scale
 const CANVAS_W = 1000, CANVAS_H = 300, GROUND_Y = 230;
 const DINO_X = 100, DINO_W = 44, DINO_H = 52;
 const GRAVITY = 2520;
 const JUMP_VEL = -880;
-const BASE_SPEED = 280;
-const SPEED_RAMP = 28;
+const BASE_SPEED = 260;
 const CLOUD_SPAWN_INTERVAL = 2.8;
 const STAR_SPAWN_INTERVAL = 1.1;
 const DUST_VX = 180, DUST_VY = -130, DUST_G = 360, DUST_DECAY = 2.8;
 const STAR_SPIN = 3.2;
 
-const EVO_EVERY = 3;
-const EVO_MAX = 9;
+// 난이도: EVO_EVERY 장애물마다 변신 (더 자주 변신)
+const EVO_EVERY = 2;
+const EVO_MAX = 11;
 
+// 12단계 변신 (기존 10 → 12단계, 더 화려)
 const EVO = [
-  { body: "#2aff8f", acc: "#1aff70", eye: "#0a0e1a", glow: "rgba(42,255,143,0.65)",  name: "T-REX" },
-  { body: "#00ffee", acc: "#00ccdd", eye: "#001a18", glow: "rgba(0,255,238,0.65)",   name: "RAPTOR" },
-  { body: "#ffff44", acc: "#ffcc00", eye: "#1a1a00", glow: "rgba(255,255,0,0.65)",   name: "CRESTUS" },
-  { body: "#ff9900", acc: "#ffcc44", eye: "#1a0800", glow: "rgba(255,153,0,0.7)",    name: "ARMOREX" },
-  { body: "#cc44ff", acc: "#ff44ff", eye: "#0a0010", glow: "rgba(200,50,255,0.7)",   name: "SPIKAREX" },
-  { body: "#44ddff", acc: "#88ffff", eye: "#001020", glow: "rgba(68,221,255,0.7)",   name: "PTERYX" },
-  { body: "#ff4422", acc: "#ff8844", eye: "#1a0000", glow: "rgba(255,60,20,0.75)",   name: "PYREX" },
-  { body: "#aaddff", acc: "#ffffff", eye: "#000a18", glow: "rgba(180,230,255,0.75)", name: "GLACIUS" },
-  { body: "#ffcc00", acc: "#fff066", eye: "#1a1000", glow: "rgba(255,200,0,0.8)",    name: "PHOENIX" },
-  { body: "#ffffff", acc: "#ff88ff", eye: "#100010", glow: "rgba(255,255,255,0.9)",  name: "DRAGON GOD" },
+  { body: "#2aff8f", acc: "#1aff70", eye: "#0a0e1a", glow: "rgba(42,255,143,0.7)",   name: "T-REX" },
+  { body: "#00ffee", acc: "#00ccdd", eye: "#001a18", glow: "rgba(0,255,238,0.7)",    name: "RAPTOR" },
+  { body: "#ffff44", acc: "#ffcc00", eye: "#1a1a00", glow: "rgba(255,255,0,0.75)",   name: "CRESTUS" },
+  { body: "#ff9900", acc: "#ffcc44", eye: "#1a0800", glow: "rgba(255,153,0,0.8)",    name: "ARMOREX" },
+  { body: "#cc44ff", acc: "#ff44ff", eye: "#0a0010", glow: "rgba(200,50,255,0.8)",   name: "SPIKAREX" },
+  { body: "#44ddff", acc: "#88ffff", eye: "#001020", glow: "rgba(68,221,255,0.8)",   name: "PTERYX" },
+  { body: "#ff4422", acc: "#ff8844", eye: "#1a0000", glow: "rgba(255,60,20,0.85)",   name: "PYREX" },
+  { body: "#aaddff", acc: "#ffffff", eye: "#000a18", glow: "rgba(180,230,255,0.85)", name: "GLACIUS" },
+  { body: "#ffcc00", acc: "#fff066", eye: "#1a1000", glow: "rgba(255,200,0,0.9)",    name: "PHOENIX" },
+  { body: "#ff44aa", acc: "#ff88dd", eye: "#1a001a", glow: "rgba(255,60,170,0.9)",   name: "VOIDWING" },
+  { body: "#00ff88", acc: "#88ffcc", eye: "#001a0e", glow: "rgba(0,255,136,0.92)",   name: "NEBULA REX" },
+  { body: "#ffffff", acc: "#ff88ff", eye: "#100010", glow: "rgba(255,255,255,0.98)", name: "DRAGON GOD" },
 ];
 
 interface Obstacle { x: number; w: number; h: number; type: "cactus" | "bird"; y: number; passed: boolean; }
