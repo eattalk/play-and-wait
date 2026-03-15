@@ -111,32 +111,34 @@ function createTransformSound(ctx: AudioContext, level: number) {
 }
 
 // ─── Game constants — optimised for 1200×800 tablet landscape ─────────────────
-// Internal canvas resolution: wide enough to feel full-screen at scale
 const CANVAS_W = 1000, CANVAS_H = 300, GROUND_Y = 230;
 const DINO_X = 100, DINO_W = 44, DINO_H = 52;
 const GRAVITY = 2520;
 const JUMP_VEL = -880;
-const BASE_SPEED = 280;
-const SPEED_RAMP = 28;
+const BASE_SPEED = 260;
 const CLOUD_SPAWN_INTERVAL = 2.8;
 const STAR_SPAWN_INTERVAL = 1.1;
 const DUST_VX = 180, DUST_VY = -130, DUST_G = 360, DUST_DECAY = 2.8;
 const STAR_SPIN = 3.2;
 
-const EVO_EVERY = 3;
-const EVO_MAX = 9;
+// 난이도: EVO_EVERY 장애물마다 변신 (더 자주 변신)
+const EVO_EVERY = 2;
+const EVO_MAX = 11;
 
+// 12단계 변신 (기존 10 → 12단계, 더 화려)
 const EVO = [
-  { body: "#2aff8f", acc: "#1aff70", eye: "#0a0e1a", glow: "rgba(42,255,143,0.65)",  name: "T-REX" },
-  { body: "#00ffee", acc: "#00ccdd", eye: "#001a18", glow: "rgba(0,255,238,0.65)",   name: "RAPTOR" },
-  { body: "#ffff44", acc: "#ffcc00", eye: "#1a1a00", glow: "rgba(255,255,0,0.65)",   name: "CRESTUS" },
-  { body: "#ff9900", acc: "#ffcc44", eye: "#1a0800", glow: "rgba(255,153,0,0.7)",    name: "ARMOREX" },
-  { body: "#cc44ff", acc: "#ff44ff", eye: "#0a0010", glow: "rgba(200,50,255,0.7)",   name: "SPIKAREX" },
-  { body: "#44ddff", acc: "#88ffff", eye: "#001020", glow: "rgba(68,221,255,0.7)",   name: "PTERYX" },
-  { body: "#ff4422", acc: "#ff8844", eye: "#1a0000", glow: "rgba(255,60,20,0.75)",   name: "PYREX" },
-  { body: "#aaddff", acc: "#ffffff", eye: "#000a18", glow: "rgba(180,230,255,0.75)", name: "GLACIUS" },
-  { body: "#ffcc00", acc: "#fff066", eye: "#1a1000", glow: "rgba(255,200,0,0.8)",    name: "PHOENIX" },
-  { body: "#ffffff", acc: "#ff88ff", eye: "#100010", glow: "rgba(255,255,255,0.9)",  name: "DRAGON GOD" },
+  { body: "#2aff8f", acc: "#1aff70", eye: "#0a0e1a", glow: "rgba(42,255,143,0.7)",   name: "T-REX" },
+  { body: "#00ffee", acc: "#00ccdd", eye: "#001a18", glow: "rgba(0,255,238,0.7)",    name: "RAPTOR" },
+  { body: "#ffff44", acc: "#ffcc00", eye: "#1a1a00", glow: "rgba(255,255,0,0.75)",   name: "CRESTUS" },
+  { body: "#ff9900", acc: "#ffcc44", eye: "#1a0800", glow: "rgba(255,153,0,0.8)",    name: "ARMOREX" },
+  { body: "#cc44ff", acc: "#ff44ff", eye: "#0a0010", glow: "rgba(200,50,255,0.8)",   name: "SPIKAREX" },
+  { body: "#44ddff", acc: "#88ffff", eye: "#001020", glow: "rgba(68,221,255,0.8)",   name: "PTERYX" },
+  { body: "#ff4422", acc: "#ff8844", eye: "#1a0000", glow: "rgba(255,60,20,0.85)",   name: "PYREX" },
+  { body: "#aaddff", acc: "#ffffff", eye: "#000a18", glow: "rgba(180,230,255,0.85)", name: "GLACIUS" },
+  { body: "#ffcc00", acc: "#fff066", eye: "#1a1000", glow: "rgba(255,200,0,0.9)",    name: "PHOENIX" },
+  { body: "#ff44aa", acc: "#ff88dd", eye: "#1a001a", glow: "rgba(255,60,170,0.9)",   name: "VOIDWING" },
+  { body: "#00ff88", acc: "#88ffcc", eye: "#001a0e", glow: "rgba(0,255,136,0.92)",   name: "NEBULA REX" },
+  { body: "#ffffff", acc: "#ff88ff", eye: "#100010", glow: "rgba(255,255,255,0.98)", name: "DRAGON GOD" },
 ];
 
 interface Obstacle { x: number; w: number; h: number; type: "cactus" | "bird"; y: number; passed: boolean; }
@@ -224,7 +226,7 @@ const DinoGame = ({ playing, maxTime, onScoreChange, onTimeChange, onGameOver }:
 
     function applyEvoGlow(level: number) {
       ctx.shadowColor = EVO[level].glow;
-      ctx.shadowBlur = 12 + level * 2;
+      ctx.shadowBlur = 14 + level * 3.5;
     }
 
     function drawLevel0(y: number, lf: number, C: typeof EVO[0]) {
@@ -462,20 +464,122 @@ const DinoGame = ({ playing, maxTime, onScoreChange, onTimeChange, onGameOver }:
       ctx.restore();
     }
 
+    // ── VOIDWING (lv 9): void portal wings + plasma tail ──────────────────────
+    function drawLevel9Voidwing(y: number, lf: number, wt: number, C: typeof EVO[0]) {
+      ctx.save();
+      // Void portal rings
+      for (let r = 0; r < 3; r++) {
+        const rad = 28 + r * 14 + Math.sin(wt * 5 + r) * 6;
+        const alpha = 0.18 - r * 0.04;
+        ctx.beginPath(); ctx.arc(DINO_X + DINO_W / 2, y + DINO_H / 2, rad, 0, Math.PI * 2);
+        ctx.strokeStyle = `rgba(255,60,200,${alpha})`; ctx.lineWidth = 3 - r * 0.5; ctx.stroke();
+      }
+      // Plasma tail
+      for (let i = 0; i < 8; i++) {
+        const tx = DINO_X - 10 - i * 8 + Math.sin(wt * 9 + i * 0.7) * 5;
+        const ty = y + DINO_H / 2 + Math.cos(wt * 7 + i * 0.9) * 7;
+        ctx.globalAlpha = 0.6 - i * 0.07;
+        ctx.fillStyle = i % 2 === 0 ? "#ff44aa" : "#aa00ff";
+        ctx.beginPath(); ctx.arc(tx, ty, 5 - i * 0.4, 0, Math.PI * 2); ctx.fill();
+      }
+      ctx.globalAlpha = 1;
+      // Wings
+      const ws = Math.sin(wt * 11) * 18;
+      ctx.fillStyle = C.acc; ctx.globalAlpha = 0.8;
+      ctx.beginPath();
+      ctx.moveTo(DINO_X + 4, y + 6); ctx.lineTo(DINO_X - 44, y - 10 + ws);
+      ctx.lineTo(DINO_X - 28, y + 14 + ws); ctx.lineTo(DINO_X + 4, y + 26); ctx.closePath(); ctx.fill();
+      ctx.beginPath();
+      ctx.moveTo(DINO_X + DINO_W - 4, y + 6); ctx.lineTo(DINO_X + DINO_W + 40, y - 12 + ws);
+      ctx.lineTo(DINO_X + DINO_W + 26, y + 12 + ws); ctx.lineTo(DINO_X + DINO_W - 4, y + 26); ctx.closePath(); ctx.fill();
+      ctx.globalAlpha = 1;
+      ctx.fillStyle = C.body;
+      ctx.fillRect(DINO_X, y, DINO_W, DINO_H - 10);
+      ctx.fillRect(DINO_X + 6, y - 20, 28, 24);
+      ctx.fillStyle = C.eye;
+      ctx.shadowColor = "#ff00cc"; ctx.shadowBlur = 18;
+      ctx.fillRect(DINO_X + 28, y - 15, 8, 8);
+      ctx.fillStyle = C.acc; ctx.fillRect(DINO_X + 32, y - 8, 12, 4);
+      ctx.fillStyle = C.body;
+      const lo = Math.sin(lf * 0.005) * 7;
+      ctx.fillRect(DINO_X + 4, y + DINO_H - 15, 13, 14 + lo);
+      ctx.fillRect(DINO_X + 24, y + DINO_H - 15, 13, 14 - lo);
+      ctx.restore();
+    }
+
+    // ── NEBULA REX (lv 10): galaxy nebula aura + crown + laser eye ────────────
+    function drawLevel10NebulaRex(y: number, lf: number, wt: number, C: typeof EVO[0]) {
+      ctx.save();
+      // Nebula spiral particles
+      for (let i = 0; i < 12; i++) {
+        const angle = wt * 2.5 + (i / 12) * Math.PI * 2;
+        const dist = 30 + Math.sin(wt * 3 + i) * 8;
+        const px = DINO_X + DINO_W / 2 + Math.cos(angle) * dist;
+        const py = y + DINO_H / 2 + Math.sin(angle) * dist * 0.5;
+        const hue = (wt * 80 + i * 30) % 360;
+        ctx.fillStyle = `hsla(${hue},100%,70%,0.6)`;
+        ctx.beginPath(); ctx.arc(px, py, 3.5, 0, Math.PI * 2); ctx.fill();
+      }
+      // Energy aura ring
+      const auraHue = (wt * 60) % 360;
+      ctx.strokeStyle = `hsla(${auraHue},100%,65%,0.5)`;
+      ctx.lineWidth = 4; ctx.shadowColor = `hsla(${auraHue},100%,65%,0.8)`; ctx.shadowBlur = 20;
+      ctx.beginPath(); ctx.arc(DINO_X + DINO_W / 2, y + DINO_H / 2, 36 + Math.sin(wt * 4) * 4, 0, Math.PI * 2); ctx.stroke();
+      ctx.shadowBlur = 0;
+      // Large wings
+      const ws = Math.sin(wt * 7) * 24;
+      ctx.fillStyle = `hsla(${auraHue},80%,65%,0.7)`;
+      ctx.beginPath();
+      ctx.moveTo(DINO_X + 4, y + 6); ctx.lineTo(DINO_X - 56, y - 14 + ws);
+      ctx.lineTo(DINO_X - 42, y + 10 + ws); ctx.lineTo(DINO_X - 20, y + 32 + ws * 0.4); ctx.lineTo(DINO_X + 4, y + 30); ctx.closePath(); ctx.fill();
+      ctx.beginPath();
+      ctx.moveTo(DINO_X + DINO_W - 4, y + 6); ctx.lineTo(DINO_X + DINO_W + 52, y - 16 + ws);
+      ctx.lineTo(DINO_X + DINO_W + 38, y + 8 + ws); ctx.lineTo(DINO_X + DINO_W + 16, y + 30 + ws * 0.4); ctx.lineTo(DINO_X + DINO_W - 4, y + 30); ctx.closePath(); ctx.fill();
+      // Body
+      ctx.shadowColor = C.glow; ctx.shadowBlur = 22;
+      ctx.fillStyle = C.body;
+      ctx.fillRect(DINO_X, y, DINO_W, DINO_H - 10);
+      ctx.fillRect(DINO_X + 4, y - 22, 36, 26);
+      // Glowing crown
+      const crownHue = (wt * 100) % 360;
+      ctx.fillStyle = `hsl(${crownHue},100%,65%)`;
+      ctx.shadowColor = `hsl(${crownHue},100%,65%)`; ctx.shadowBlur = 16;
+      [[8, 18],[16, 24],[22, 20],[30, 26],[36, 16]].forEach(([cx2, ch]) => {
+        ctx.fillRect(DINO_X + cx2, y - 22 - ch, 5, ch);
+      });
+      // Laser eye
+      ctx.fillStyle = "#ff0000"; ctx.shadowColor = "#ff0000"; ctx.shadowBlur = 20;
+      ctx.fillRect(DINO_X + 28, y - 16, 10, 10);
+      if (Math.sin(wt * 10) > 0) {
+        ctx.fillStyle = `hsl(${crownHue},100%,70%)`; ctx.globalAlpha = 0.9;
+        ctx.beginPath();
+        ctx.moveTo(DINO_X + 40, y - 10); ctx.lineTo(DINO_X + 90 + Math.sin(wt * 13) * 10, y - 5);
+        ctx.lineTo(DINO_X + 70, y + 2); ctx.closePath(); ctx.fill();
+        ctx.globalAlpha = 1;
+      }
+      ctx.fillStyle = C.body;
+      const lo = Math.sin(lf * 0.005) * 8;
+      ctx.fillRect(DINO_X + 4, y + DINO_H - 15, 14, 15 + lo);
+      ctx.fillRect(DINO_X + 24, y + DINO_H - 15, 14, 15 - lo);
+      ctx.restore();
+    }
+
     function drawDino(y: number, lf: number, wt: number, lv: number) {
       const C = EVO[lv];
       ctx.save(); applyEvoGlow(lv);
       switch (lv) {
-        case 0: drawLevel0(y, lf, C); break;
-        case 1: drawLevel1(y, lf, C); break;
-        case 2: drawLevel2(y, lf, wt, C); break;
-        case 3: drawLevel3(y, lf, C); break;
-        case 4: drawLevel4(y, lf, wt, C); break;
-        case 5: drawLevel5(y, lf, wt, C); break;
-        case 6: drawLevel6(y, lf, wt, C); break;
-        case 7: drawLevel7(y, lf, wt, C); break;
-        case 8: drawLevel8(y, lf, wt, C); break;
-        default: drawLevel9(y, lf, wt, C); break;
+        case 0:  drawLevel0(y, lf, C); break;
+        case 1:  drawLevel1(y, lf, C); break;
+        case 2:  drawLevel2(y, lf, wt, C); break;
+        case 3:  drawLevel3(y, lf, C); break;
+        case 4:  drawLevel4(y, lf, wt, C); break;
+        case 5:  drawLevel5(y, lf, wt, C); break;
+        case 6:  drawLevel6(y, lf, wt, C); break;
+        case 7:  drawLevel7(y, lf, wt, C); break;
+        case 8:  drawLevel8(y, lf, wt, C); break;
+        case 9:  drawLevel9Voidwing(y, lf, wt, C); break;
+        case 10: drawLevel10NebulaRex(y, lf, wt, C); break;
+        default: drawLevel9(y, lf, wt, C); break; // lv 11 = DRAGON GOD (existing)
       }
       ctx.restore();
     }
@@ -484,19 +588,34 @@ const DinoGame = ({ playing, maxTime, onScoreChange, onTimeChange, onGameOver }:
       if (flash <= 0) return;
       const C = EVO[lv];
       ctx.save();
-      ctx.globalAlpha = flash * 0.45;
+      // Expanding ring burst
+      ctx.globalAlpha = flash * 0.5;
       ctx.fillStyle = C.body; ctx.fillRect(0, 0, CANVAS_W, CANVAS_H);
       ctx.globalAlpha = flash;
-      ctx.strokeStyle = C.acc; ctx.lineWidth = 4;
-      ctx.shadowColor = C.glow; ctx.shadowBlur = 24;
-      const r = (1 - flash) * 180 + 24;
-      ctx.beginPath(); ctx.arc(DINO_X + DINO_W / 2, s.dy + DINO_H / 2, r, 0, Math.PI * 2); ctx.stroke();
-      ctx.beginPath(); ctx.arc(DINO_X + DINO_W / 2, s.dy + DINO_H / 2, r * 0.6, 0, Math.PI * 2); ctx.stroke();
+      ctx.lineWidth = 5;
+      ctx.shadowColor = C.glow; ctx.shadowBlur = 32;
+      for (let ring = 0; ring < 3; ring++) {
+        const r = (1 - flash) * (180 + ring * 50) + 24;
+        ctx.strokeStyle = ring % 2 === 0 ? C.acc : C.body;
+        ctx.beginPath(); ctx.arc(DINO_X + DINO_W / 2, s.dy + DINO_H / 2, r, 0, Math.PI * 2); ctx.stroke();
+      }
+      // Sparkle particles burst
+      if (flash > 0.5) {
+        for (let i = 0; i < 8; i++) {
+          const ang = (i / 8) * Math.PI * 2 + flash * 3;
+          const dist = (1 - flash) * 100 + 20;
+          const px = DINO_X + DINO_W / 2 + Math.cos(ang) * dist;
+          const py = s.dy + DINO_H / 2 + Math.sin(ang) * dist;
+          ctx.fillStyle = i % 2 === 0 ? C.acc : C.body;
+          ctx.globalAlpha = flash * 0.9;
+          ctx.beginPath(); ctx.arc(px, py, 4, 0, Math.PI * 2); ctx.fill();
+        }
+      }
       if (flash > 0.35) {
         ctx.globalAlpha = (flash - 0.35) / 0.65;
         ctx.fillStyle = C.acc;
-        ctx.font = `bold ${14 + lv}px 'Press Start 2P', monospace`;
-        ctx.textAlign = "center"; ctx.shadowBlur = 36;
+        ctx.font = `bold ${14 + Math.min(lv, 6)}px 'Press Start 2P', monospace`;
+        ctx.textAlign = "center"; ctx.shadowBlur = 40;
         ctx.fillText(C.name + "!", CANVAS_W / 2, CANVAS_H / 2 - 8);
         if (lv === EVO_MAX) {
           ctx.font = "10px 'Press Start 2P', monospace";
@@ -506,6 +625,7 @@ const DinoGame = ({ playing, maxTime, onScoreChange, onTimeChange, onGameOver }:
       }
       ctx.restore();
     }
+
 
     function drawStar(star: StarObj) {
       ctx.save(); ctx.translate(star.x, star.y); ctx.rotate(star.angle);
@@ -556,28 +676,34 @@ const DinoGame = ({ playing, maxTime, onScoreChange, onTimeChange, onGameOver }:
     }
 
     function randomObsInterval() {
-      // 점프 체공시간(≈0.70s) + 착지후 반응 여유(0.35s) = 최소 1.05s 보장
-      // 어떤 속도에서도 착지 → 재점프로 반드시 피할 수 있음
+      // 점프 체공시간(≈0.70s) + 착지후 반응 여유(0.30s) = 최소 1.00s 보장
       const jumpAirTime = (Math.abs(JUMP_VEL) * 2) / GRAVITY; // ~0.698s
-      const MIN_SAFE = jumpAirTime + 0.35;                      // ~1.05s
-      const base = 1.6 - (s.speed - BASE_SPEED) / 280;
-      const raw  = base * (0.75 + Math.random() * 0.5);
+      const MIN_SAFE = jumpAirTime + 0.30;                      // ~1.00s
+      // 속도가 빠를수록 간격 더 짧아져서 더 빡빡해짐
+      const base = 1.55 - (s.speed - BASE_SPEED) / 220;
+      const raw  = base * (0.65 + Math.random() * 0.45);
       return Math.max(MIN_SAFE, raw);
     }
 
     function spawnWave() {
-      // 선인장 장애물만 생성 (bird 제거)
-      const h = Math.random() * 35 + 28;
-      const y = GROUND_Y - h;
-      s.obstacles.push({ x: CANVAS_W + 10, w: 36, h, type: "cactus", y, passed: false });
-      if (s.speed > 500 && Math.random() < 0.4) {
-        const gap = 60 + Math.random() * 44;
-        const h2 = Math.random() * 28 + 28;
+      const h = Math.random() * 38 + 26;
+      s.obstacles.push({ x: CANVAS_W + 10, w: 36, h, type: "cactus", y: GROUND_Y - h, passed: false });
+      // 속도 400 이상: 30% 확률로 쌍선인장
+      if (s.speed > 400 && Math.random() < 0.30) {
+        const gap = 58 + Math.random() * 40;
+        const h2 = Math.random() * 32 + 26;
         s.obstacles.push({ x: CANVAS_W + 10 + gap, w: 36, h: h2, type: "cactus", y: GROUND_Y - h2, passed: false });
       }
-      if (s.speed > 700 && Math.random() < 0.25) {
-        const h3 = Math.random() * 24 + 28;
-        s.obstacles.push({ x: CANVAS_W + 120 + Math.random() * 30, w: 36, h: h3, type: "cactus", y: GROUND_Y - h3, passed: false });
+      // 속도 600 이상: 40% 확률로 쌍선인장
+      if (s.speed > 600 && Math.random() < 0.40) {
+        const gap = 55 + Math.random() * 38;
+        const h2 = Math.random() * 34 + 26;
+        s.obstacles.push({ x: CANVAS_W + 10 + gap, w: 36, h: h2, type: "cactus", y: GROUND_Y - h2, passed: false });
+      }
+      // 속도 800 이상: 25% 확률로 3연속
+      if (s.speed > 800 && Math.random() < 0.25) {
+        const h3 = Math.random() * 28 + 26;
+        s.obstacles.push({ x: CANVAS_W + 110 + Math.random() * 28, w: 36, h: h3, type: "cactus", y: GROUND_Y - h3, passed: false });
       }
     }
 
@@ -611,11 +737,11 @@ const DinoGame = ({ playing, maxTime, onScoreChange, onTimeChange, onGameOver }:
         s.gameOver = true; createHitSound(getAudio()); onGameOver(s.score); return;
       }
 
-      // 지수형 가속: 초반 완만, 중반부터 급격히 빨라짐
-      // speed = BASE + 선형(t*18) + 지수(e^(t/30)-1)*120
+      // 난이도 가속: 초반 완만 → 중반 급격히 → 후반 극한
+      // speed = BASE + 선형(t*22) + 지수(e^(t/22)-1)*160
       s.speed = BASE_SPEED
-        + s.elapsed * 18
-        + (Math.exp(s.elapsed / 30) - 1) * 120;
+        + s.elapsed * 22
+        + (Math.exp(s.elapsed / 22) - 1) * 160;
 
       const speedTier = Math.floor((s.speed - BASE_SPEED) / 80);
       if (speedTier > s.lastSpeedTier) { createSpeedUpSound(getAudio()); s.lastSpeedTier = speedTier; }
