@@ -226,7 +226,7 @@ const DinoGame = ({ playing, maxTime, onScoreChange, onTimeChange, onGameOver }:
 
     function applyEvoGlow(level: number) {
       ctx.shadowColor = EVO[level].glow;
-      ctx.shadowBlur = 12 + level * 2;
+      ctx.shadowBlur = 14 + level * 3.5;
     }
 
     function drawLevel0(y: number, lf: number, C: typeof EVO[0]) {
