@@ -588,19 +588,34 @@ const DinoGame = ({ playing, maxTime, onScoreChange, onTimeChange, onGameOver }:
       if (flash <= 0) return;
       const C = EVO[lv];
       ctx.save();
-      ctx.globalAlpha = flash * 0.45;
+      // Expanding ring burst
+      ctx.globalAlpha = flash * 0.5;
       ctx.fillStyle = C.body; ctx.fillRect(0, 0, CANVAS_W, CANVAS_H);
       ctx.globalAlpha = flash;
-      ctx.strokeStyle = C.acc; ctx.lineWidth = 4;
-      ctx.shadowColor = C.glow; ctx.shadowBlur = 24;
-      const r = (1 - flash) * 180 + 24;
-      ctx.beginPath(); ctx.arc(DINO_X + DINO_W / 2, s.dy + DINO_H / 2, r, 0, Math.PI * 2); ctx.stroke();
-      ctx.beginPath(); ctx.arc(DINO_X + DINO_W / 2, s.dy + DINO_H / 2, r * 0.6, 0, Math.PI * 2); ctx.stroke();
+      ctx.lineWidth = 5;
+      ctx.shadowColor = C.glow; ctx.shadowBlur = 32;
+      for (let ring = 0; ring < 3; ring++) {
+        const r = (1 - flash) * (180 + ring * 50) + 24;
+        ctx.strokeStyle = ring % 2 === 0 ? C.acc : C.body;
+        ctx.beginPath(); ctx.arc(DINO_X + DINO_W / 2, s.dy + DINO_H / 2, r, 0, Math.PI * 2); ctx.stroke();
+      }
+      // Sparkle particles burst
+      if (flash > 0.5) {
+        for (let i = 0; i < 8; i++) {
+          const ang = (i / 8) * Math.PI * 2 + flash * 3;
+          const dist = (1 - flash) * 100 + 20;
+          const px = DINO_X + DINO_W / 2 + Math.cos(ang) * dist;
+          const py = s.dy + DINO_H / 2 + Math.sin(ang) * dist;
+          ctx.fillStyle = i % 2 === 0 ? C.acc : C.body;
+          ctx.globalAlpha = flash * 0.9;
+          ctx.beginPath(); ctx.arc(px, py, 4, 0, Math.PI * 2); ctx.fill();
+        }
+      }
       if (flash > 0.35) {
         ctx.globalAlpha = (flash - 0.35) / 0.65;
         ctx.fillStyle = C.acc;
-        ctx.font = `bold ${14 + lv}px 'Press Start 2P', monospace`;
-        ctx.textAlign = "center"; ctx.shadowBlur = 36;
+        ctx.font = `bold ${14 + Math.min(lv, 6)}px 'Press Start 2P', monospace`;
+        ctx.textAlign = "center"; ctx.shadowBlur = 40;
         ctx.fillText(C.name + "!", CANVAS_W / 2, CANVAS_H / 2 - 8);
         if (lv === EVO_MAX) {
           ctx.font = "10px 'Press Start 2P', monospace";
@@ -610,6 +625,7 @@ const DinoGame = ({ playing, maxTime, onScoreChange, onTimeChange, onGameOver }:
       }
       ctx.restore();
     }
+
 
     function drawStar(star: StarObj) {
       ctx.save(); ctx.translate(star.x, star.y); ctx.rotate(star.angle);
