@@ -257,11 +257,13 @@ const GamePage = () => {
   const waitTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const autoStartRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const gameStartRef = useRef<number>(0);
-  const bgmRef = useRef<ChiptuneBGM | null>(null);
+  const introBgmRef = useRef<ChiptuneBGM | null>(null);  // 인트로 BGM
+  const gameBgmRef = useRef<GameChiptuneBGM | null>(null); // 게임 BGM
   const goalPlayedRef = useRef(false);
 
   const goToResult = useCallback((finalScore: number) => {
-    bgmRef.current?.close(); bgmRef.current = null;
+    gameBgmRef.current?.close(); gameBgmRef.current = null;
+    introBgmRef.current?.close(); introBgmRef.current = null;
     navigate(`/webview/games/result?score=${finalScore}`);
   }, [navigate]);
 
@@ -271,13 +273,13 @@ const GamePage = () => {
     setCountdown(3);
   };
 
-  // ── 첫 클릭: AudioContext resume() await 후 점프음 + BGM 시작 ───────────────
+  // ── 첫 클릭: AudioContext resume() await 후 점프음 + 인트로 BGM 시작 ─────────
   const handleIntroInteraction = useCallback(async () => {
     try {
-      await initAC(); // AudioContext가 running 상태가 될 때까지 기다림
+      await initAC();
       playIntroJump();
-      if (!bgmRef.current) bgmRef.current = new ChiptuneBGM();
-      bgmRef.current.start();
+      if (!introBgmRef.current) introBgmRef.current = new ChiptuneBGM();
+      introBgmRef.current.start();
       setAudioUnlocked(true);
     } catch (_) { /* ignore */ }
   }, []);
@@ -316,12 +318,14 @@ const GamePage = () => {
     if (phase !== "countdown") return;
     playCountdownBeep(countdown);
     if (countdown <= 0) {
+      // 인트로 BGM 종료 → 게임 BGM 시작
+      introBgmRef.current?.close(); introBgmRef.current = null;
       setPhase("playing");
       setShowGoal(false);
       goalPlayedRef.current = false;
       gameStartRef.current = Date.now();
-      if (!bgmRef.current) bgmRef.current = new ChiptuneBGM();
-      bgmRef.current.start();
+      if (!gameBgmRef.current) gameBgmRef.current = new GameChiptuneBGM();
+      gameBgmRef.current.start();
       return;
     }
     const t = setTimeout(() => setCountdown(c => c - 1), 1000);
