@@ -3,6 +3,7 @@ import { useEffect, useRef, useState, useCallback } from "react";
 import DinoGame from "@/components/DinoGame";
 import GameDemoCanvas from "@/components/GameDemoCanvas";
 
+// ── Countdown beeps ────────────────────────────────────────────────────────────
 function playCountdownBeep(n: number) {
   try {
     const ctx = new (window.AudioContext || (window as any).webkitAudioContext)();
@@ -30,7 +31,129 @@ function playCountdownBeep(n: number) {
   } catch (_) { /* ignore */ }
 }
 
+// ── Goal fanfare ───────────────────────────────────────────────────────────────
+function playGoalFanfare(ctx: AudioContext) {
+  const t = ctx.currentTime;
+  const notes = [523, 659, 784, 1047];
+  notes.forEach((freq, i) => {
+    const osc = ctx.createOscillator(), g = ctx.createGain();
+    osc.connect(g); g.connect(ctx.destination);
+    osc.type = "square";
+    osc.frequency.setValueAtTime(freq, t + i * 0.12);
+    g.gain.setValueAtTime(0.22, t + i * 0.12);
+    g.gain.exponentialRampToValueAtTime(0.001, t + i * 0.12 + 0.25);
+    osc.start(t + i * 0.12); osc.stop(t + i * 0.12 + 0.25);
+  });
+}
+
+// ── Intro jump sound ───────────────────────────────────────────────────────────
+function playIntroJump(ctx: AudioContext) {
+  const osc = ctx.createOscillator(), g = ctx.createGain();
+  osc.connect(g); g.connect(ctx.destination);
+  osc.type = "square";
+  osc.frequency.setValueAtTime(380, ctx.currentTime);
+  osc.frequency.exponentialRampToValueAtTime(190, ctx.currentTime + 0.13);
+  g.gain.setValueAtTime(0.14, ctx.currentTime);
+  g.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.13);
+  osc.start(ctx.currentTime); osc.stop(ctx.currentTime + 0.13);
+}
+
+// ── Chiptune BGM ──────────────────────────────────────────────────────────────
+class ChiptuneBGM {
+  private ctx: AudioContext;
+  private masterGain: GainNode;
+  private running = false;
+  private noteIdx = 0;
+  private beatTimer = 0;
+  private rafId = 0;
+  private lastTs = 0;
+
+  // 8-bit style melody (C major pentatonic)
+  private melody = [
+    523, 659, 784, 659, 523, 659, 784, 1047,
+    880, 784, 659, 784, 523, 659, 523, 392,
+    523, 659, 784, 880, 784, 659, 523, 659,
+    392, 523, 659, 523, 392, 330, 392, 523,
+  ];
+  // Bass line
+  private bass = [
+    130, 130, 164, 164, 130, 130, 164, 196,
+    164, 164, 130, 164, 130, 130, 130, 98,
+    130, 130, 164, 174, 164, 130, 130, 130,
+    98, 130, 130, 130, 98, 82, 98, 130,
+  ];
+
+  constructor() {
+    this.ctx = new (window.AudioContext || (window as any).webkitAudioContext)();
+    this.masterGain = this.ctx.createGain();
+    this.masterGain.gain.setValueAtTime(0.07, this.ctx.currentTime);
+    this.masterGain.connect(this.ctx.destination);
+  }
+
+  private playNote(freq: number, bassFreq: number) {
+    const t = this.ctx.currentTime;
+    const dur = 0.13;
+
+    // Melody — square wave
+    const osc = this.ctx.createOscillator(), g = this.ctx.createGain();
+    osc.type = "square"; osc.frequency.setValueAtTime(freq, t);
+    g.gain.setValueAtTime(0.5, t); g.gain.exponentialRampToValueAtTime(0.001, t + dur);
+    osc.connect(g); g.connect(this.masterGain);
+    osc.start(t); osc.stop(t + dur);
+
+    // Bass — triangle wave
+    const b = this.ctx.createOscillator(), bg = this.ctx.createGain();
+    b.type = "triangle"; b.frequency.setValueAtTime(bassFreq, t);
+    bg.gain.setValueAtTime(0.4, t); bg.gain.exponentialRampToValueAtTime(0.001, t + dur * 1.5);
+    b.connect(bg); bg.connect(this.masterGain);
+    b.start(t); b.stop(t + dur * 1.5);
+  }
+
+  start() {
+    if (this.running) return;
+    this.running = true;
+    if (this.ctx.state === "suspended") this.ctx.resume();
+    this.lastTs = 0;
+    const BPM = 160;
+    const beatLen = 60 / BPM;
+    const tick = (ts: number) => {
+      if (!this.running) return;
+      if (this.lastTs === 0) { this.lastTs = ts; this.rafId = requestAnimationFrame(tick); return; }
+      const dt = Math.min((ts - this.lastTs) / 1000, 0.05);
+      this.lastTs = ts;
+      this.beatTimer += dt;
+      if (this.beatTimer >= beatLen) {
+        this.beatTimer -= beatLen;
+        const idx = this.noteIdx % this.melody.length;
+        this.playNote(this.melody[idx], this.bass[idx]);
+        this.noteIdx++;
+      }
+      this.rafId = requestAnimationFrame(tick);
+    };
+    this.rafId = requestAnimationFrame(tick);
+  }
+
+  stop() {
+    this.running = false;
+    cancelAnimationFrame(this.rafId);
+    this.masterGain.gain.setTargetAtTime(0, this.ctx.currentTime, 0.3);
+  }
+
+  setTempo(bpm: number) {
+    // Not used dynamically here, but available
+  }
+
+  close() {
+    this.stop();
+    setTimeout(() => this.ctx.close(), 600);
+  }
+
+  getCtx() { return this.ctx; }
+}
+
 const MAX_TIME_BUFFER = 15;
+const MAX_GAME_TIME = 50;
+const GOAL_WARN_SECS = 7; // seconds before end to show 골인 overlay
 
 const GamePage = () => {
   const { game_type } = useParams();
@@ -42,13 +165,24 @@ const GamePage = () => {
   const [countdown, setCountdown] = useState(3);
   const [score, setScore] = useState(0);
   const [gameTime, setGameTime] = useState(0);
-  const [maxTime] = useState(90);
   const [autoStart, setAutoStart] = useState(5);
+  const [showGoal, setShowGoal] = useState(false);
   const waitTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const autoStartRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const gameStartRef = useRef<number>(0);
+  const bgmRef = useRef<ChiptuneBGM | null>(null);
+  const audioCtxRef = useRef<AudioContext | null>(null);
+  const goalPlayedRef = useRef(false);
+
+  const getAudioCtx = useCallback(() => {
+    if (!audioCtxRef.current)
+      audioCtxRef.current = new (window.AudioContext || (window as any).webkitAudioContext)();
+    if (audioCtxRef.current.state === "suspended") audioCtxRef.current.resume();
+    return audioCtxRef.current;
+  }, []);
 
   const goToResult = useCallback((finalScore: number) => {
+    bgmRef.current?.close(); bgmRef.current = null;
     navigate(`/webview/games/result?score=${finalScore}`);
   }, [navigate]);
 
@@ -57,6 +191,11 @@ const GamePage = () => {
     setPhase("countdown");
     setCountdown(3);
   };
+
+  // Intro jump sound on click/tap/space
+  const handleIntroInteraction = useCallback(() => {
+    try { playIntroJump(getAudioCtx()); } catch (_) { /* ignore */ }
+  }, [getAudioCtx]);
 
   // Auto-start countdown on instructions screen
   useEffect(() => {
@@ -77,36 +216,62 @@ const GamePage = () => {
     return () => { if (autoStartRef.current) clearInterval(autoStartRef.current); };
   }, [phase]);
 
+  // Space/tap → intro jump sound (only during instructions)
+  useEffect(() => {
+    if (phase !== "instructions") return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.code === "Space" || e.code === "ArrowUp") { e.preventDefault(); handleIntroInteraction(); }
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [phase, handleIntroInteraction]);
+
+  // Countdown beeps + BGM start
   useEffect(() => {
     if (phase !== "countdown") return;
     playCountdownBeep(countdown);
     if (countdown <= 0) {
       setPhase("playing");
+      setShowGoal(false);
+      goalPlayedRef.current = false;
       gameStartRef.current = Date.now();
+      // Start BGM
+      if (!bgmRef.current) bgmRef.current = new ChiptuneBGM();
+      bgmRef.current.start();
       return;
     }
     const t = setTimeout(() => setCountdown(c => c - 1), 1000);
     return () => clearTimeout(t);
   }, [phase, countdown]);
 
+  // 골인 warning + fanfare
+  useEffect(() => {
+    if (phase !== "playing") return;
+    const remainingSecs = MAX_GAME_TIME - gameTime / 1000;
+    if (remainingSecs <= GOAL_WARN_SECS && !goalPlayedRef.current) {
+      goalPlayedRef.current = true;
+      setShowGoal(true);
+      try {
+        if (bgmRef.current) playGoalFanfare(bgmRef.current.getCtx());
+      } catch (_) { /* ignore */ }
+    }
+  }, [phase, gameTime]);
+
   const handleGameOver = useCallback((finalScore: number) => {
     setScore(finalScore);
     setPhase("waiting");
+    bgmRef.current?.stop();
     const elapsed = (Date.now() - gameStartRef.current) / 1000;
-    const remaining = maxTime + MAX_TIME_BUFFER - elapsed;
+    const remaining = MAX_GAME_TIME + MAX_TIME_BUFFER - elapsed;
     const waitMs = Math.max(0, remaining * 1000);
     waitTimerRef.current = setTimeout(() => { goToResult(finalScore); }, waitMs);
-  }, [maxTime, goToResult]);
+  }, [goToResult]);
 
   useEffect(() => {
-    if (phase !== "playing") return;
-    const hardMax = (maxTime + MAX_TIME_BUFFER) * 1000;
-    const t = setTimeout(() => {}, hardMax);
-    return () => clearTimeout(t);
-  }, [phase, maxTime]);
-
-  useEffect(() => {
-    return () => { if (waitTimerRef.current) clearTimeout(waitTimerRef.current); };
+    return () => {
+      if (waitTimerRef.current) clearTimeout(waitTimerRef.current);
+      bgmRef.current?.close(); bgmRef.current = null;
+    };
   }, []);
 
   const formatTime = (ms: number) => {
@@ -116,8 +281,9 @@ const GamePage = () => {
     return `${m}:${s}`;
   };
 
+  const remainingSecs = Math.max(0, MAX_GAME_TIME - Math.floor(gameTime / 1000));
+
   return (
-    // Full-screen layout — fills the 1200×800 tablet viewport
     <div className="h-screen bg-background flex flex-col overflow-hidden relative">
 
       {/* Stars background */}
@@ -138,7 +304,10 @@ const GamePage = () => {
 
       {/* ── Instructions ── */}
       {phase === "instructions" && (
-        <div className="relative z-10 flex flex-col items-center justify-center flex-1 gap-4 px-6">
+        <div
+          className="relative z-10 flex flex-col items-center justify-center flex-1 gap-4 px-6"
+          onClick={handleIntroInteraction}
+        >
           <h1
             className="font-pixel text-neon-green"
             style={{ fontSize: "clamp(1rem, 2.5vw, 1.6rem)", textShadow: "0 0 24px hsl(var(--neon-green))" }}
@@ -146,7 +315,6 @@ const GamePage = () => {
             DINO STAR RUSH
           </h1>
 
-          {/* Demo — fills most of the width */}
           <div
             className="w-full border-2 border-neon-green/30 rounded overflow-hidden"
             style={{ maxWidth: "960px", boxShadow: "0 0 28px hsl(var(--neon-green) / 0.12)" }}
@@ -154,7 +322,6 @@ const GamePage = () => {
             <GameDemoCanvas />
           </div>
 
-          {/* Hints row */}
           <div className="flex items-center gap-6">
             <span className="font-pixel text-neon-green text-xs" style={{ textShadow: "0 0 8px hsl(var(--neon-green))" }}>
               SPACE / TAP = JUMP
@@ -169,13 +336,12 @@ const GamePage = () => {
 
           <div className="flex flex-col items-center gap-2">
             <button
-              onClick={startGame}
+              onClick={e => { e.stopPropagation(); startGame(); }}
               className="font-pixel px-12 py-4 bg-neon-green text-background rounded hover:brightness-125 transition-all relative overflow-hidden"
               style={{ fontSize: "clamp(0.7rem, 1.5vw, 1rem)", boxShadow: "0 0 24px hsl(var(--neon-green) / 0.5)" }}
             >
-              {/* Auto-start progress bar */}
               <span
-                className="absolute left-0 top-0 h-full bg-background/20 transition-none"
+                className="absolute left-0 top-0 h-full bg-background/20"
                 style={{ width: `${((5 - autoStart) / 5) * 100}%`, transition: "width 1s linear" }}
               />
               <span className="relative z-10">▶ START GAME</span>
@@ -209,26 +375,64 @@ const GamePage = () => {
             <div className="font-pixel text-neon-yellow" style={{ fontSize: "clamp(0.6rem, 1.2vw, 0.85rem)" }}>
               SCORE: <span className="text-neon-green">{score}</span>
             </div>
-            <div className="font-pixel text-muted-foreground" style={{ fontSize: "clamp(0.6rem, 1.2vw, 0.85rem)" }}>
-              {formatTime(gameTime)}
+            {/* Countdown timer — turns red in last 7s */}
+            <div
+              className="font-pixel"
+              style={{
+                fontSize: "clamp(0.7rem, 1.4vw, 1rem)",
+                color: remainingSecs <= GOAL_WARN_SECS ? "#ff4444" : "hsl(var(--muted-foreground))",
+                textShadow: remainingSecs <= GOAL_WARN_SECS ? "0 0 16px #ff4444" : "none",
+                transition: "color 0.3s, text-shadow 0.3s",
+              }}
+            >
+              {remainingSecs <= GOAL_WARN_SECS ? `⏱ ${remainingSecs}s` : formatTime(gameTime)}
             </div>
             <div className="font-pixel text-muted-foreground" style={{ fontSize: "clamp(0.6rem, 1.2vw, 0.85rem)" }}>
               TABLE: <span className="text-neon-cyan">{table_name}</span>
             </div>
           </div>
 
-          {/* Game canvas — centred, fills available width */}
+          {/* Game canvas */}
           <div className="flex-1 flex items-center justify-center px-4 pb-4">
             <div className="w-full" style={{ maxWidth: "1100px" }}>
               <DinoGame
                 playing={phase === "playing"}
-                maxTime={maxTime}
+                maxTime={MAX_GAME_TIME}
                 onScoreChange={setScore}
                 onTimeChange={setGameTime}
                 onGameOver={handleGameOver}
               />
             </div>
           </div>
+
+          {/* 골인! overlay (last 7s) */}
+          {showGoal && phase === "playing" && (
+            <div className="absolute inset-0 pointer-events-none z-30 flex items-center justify-center">
+              <div
+                className="font-pixel text-center"
+                style={{ animation: "pulse 0.6s ease-in-out infinite" }}
+              >
+                <p
+                  style={{
+                    fontSize: "clamp(2rem, 6vw, 4rem)",
+                    color: "#ffcc00",
+                    textShadow: "0 0 40px #ffcc00, 0 0 80px #ff8800",
+                  }}
+                >
+                  🏁 골인!
+                </p>
+                <p
+                  style={{
+                    fontSize: "clamp(0.6rem, 1.2vw, 0.9rem)",
+                    color: "#ff8800",
+                    marginTop: "0.5rem",
+                  }}
+                >
+                  {remainingSecs}초 남았다!
+                </p>
+              </div>
+            </div>
+          )}
 
           {/* Game over overlay */}
           {phase === "waiting" && (
