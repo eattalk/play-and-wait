@@ -442,71 +442,83 @@ const GamePage = () => {
 
       {/* ── Countdown ── */}
       {phase === "countdown" && (
-        <div className="relative z-10 flex flex-col items-center justify-center flex-1 gap-6">
-          {/* 배경 링 */}
-          <div
-            className="absolute rounded-full border-2 border-neon-green/20"
-            style={{
-              width: "clamp(180px, 30vw, 340px)",
-              height: "clamp(180px, 30vw, 340px)",
-              animation: "pulse 1s ease-in-out infinite",
-            }}
-          />
-          <div
-            className="absolute rounded-full border border-neon-green/10"
-            style={{
-              width: "clamp(240px, 40vw, 460px)",
-              height: "clamp(240px, 40vw, 460px)",
-              animation: "pulse 1.4s ease-in-out infinite",
-            }}
-          />
+        <div className="relative z-10 flex flex-col items-center justify-center flex-1 overflow-hidden">
 
-          {/* GET READY 텍스트 */}
-          <p
-            className="font-pixel tracking-[0.3em] relative z-10"
+          {/* 배경 그라디언트 */}
+          <div className="absolute inset-0 bg-gradient-radial from-neon-green/5 via-transparent to-transparent" />
+
+          {/* 퍼지는 링 */}
+          {[1, 2, 3].map(i => (
+            <div
+              key={i}
+              className="absolute rounded-full border border-neon-green/20 pointer-events-none"
+              style={{
+                width: `${i * 28}vw`, height: `${i * 28}vw`,
+                maxWidth: `${i * 320}px`, maxHeight: `${i * 320}px`,
+                opacity: 1 - i * 0.25,
+                animation: `pulse ${0.9 + i * 0.3}s ease-in-out infinite`,
+              }}
+            />
+          ))}
+
+          {/* GET READY */}
+          <p className="font-pixel relative z-10 tracking-[0.4em] mb-6"
             style={{
-              fontSize: "clamp(0.55rem, 1.1vw, 0.8rem)",
+              fontSize: "clamp(0.5rem, 1vw, 0.75rem)",
               color: "hsl(var(--muted-foreground))",
-              letterSpacing: "0.4em",
             }}
           >
-            GET READY
+            GET  READY
           </p>
 
-          {/* 숫자 / GO! */}
+          {/* 숫자 */}
           <div
-            className="relative z-10 font-pixel flex items-center justify-center"
             key={countdown}
+            className="relative z-10 font-pixel"
             style={{
-              fontSize: countdown === 0 ? "clamp(3.5rem, 9vw, 7rem)" : "clamp(5rem, 13vw, 9rem)",
+              fontSize: countdown === 0 ? "clamp(4rem, 12vw, 8rem)" : "clamp(6rem, 16vw, 11rem)",
+              lineHeight: 1,
               color: countdown === 0 ? "hsl(var(--neon-yellow))" : "hsl(var(--neon-green))",
               textShadow: countdown === 0
-                ? "0 0 40px hsl(var(--neon-yellow)), 0 0 80px hsl(var(--neon-yellow) / 0.4)"
-                : "0 0 40px hsl(var(--neon-green)), 0 0 80px hsl(var(--neon-green) / 0.4)",
-              animation: "pulse 0.5s ease-out",
-              lineHeight: 1,
+                ? "0 0 30px hsl(var(--neon-yellow)), 0 0 80px hsl(var(--neon-yellow)/0.5), 0 0 120px hsl(var(--neon-yellow)/0.2)"
+                : "0 0 30px hsl(var(--neon-green)), 0 0 80px hsl(var(--neon-green)/0.5), 0 0 140px hsl(var(--neon-green)/0.2)",
+              animation: "scale-in 0.25s ease-out",
             }}
           >
             {countdown === 0 ? "GO!" : countdown}
           </div>
 
-          {/* 하단 점 인디케이터 */}
-          <div className="flex gap-3 relative z-10 mt-2">
-            {[3, 2, 1].map(n => (
-              <div
-                key={n}
-                className="rounded-full transition-all duration-300"
-                style={{
-                  width: "10px", height: "10px",
-                  background: countdown <= n && countdown > 0
-                    ? "hsl(var(--neon-green))"
-                    : "hsl(var(--muted-foreground) / 0.3)",
-                  boxShadow: countdown <= n && countdown > 0
-                    ? "0 0 8px hsl(var(--neon-green))"
-                    : "none",
-                }}
-              />
-            ))}
+          {/* 하단 스텝 바 */}
+          <div className="flex items-center gap-3 mt-8 relative z-10">
+            {[3, 2, 1, 0].map((n, idx) => {
+              const active = countdown <= n ? (n === 0 ? countdown === 0 : true) : false;
+              const isGo = n === 0;
+              return (
+                <div key={n} className="flex flex-col items-center gap-1">
+                  <div
+                    className="rounded-sm transition-all duration-200"
+                    style={{
+                      width: isGo ? "36px" : "20px",
+                      height: "6px",
+                      background: countdown === n
+                        ? (isGo ? "hsl(var(--neon-yellow))" : "hsl(var(--neon-green))")
+                        : countdown < n
+                          ? "hsl(var(--neon-green)/0.5)"
+                          : "hsl(var(--muted-foreground)/0.2)",
+                      boxShadow: countdown === n
+                        ? `0 0 10px ${isGo ? "hsl(var(--neon-yellow))" : "hsl(var(--neon-green))"}`
+                        : "none",
+                    }}
+                  />
+                  <span className="font-pixel" style={{
+                    fontSize: "0.4rem",
+                    color: countdown <= n ? "hsl(var(--neon-green))" : "hsl(var(--muted-foreground)/0.3)",
+                  }}>
+                    {isGo ? "GO" : n}
+                  </span>
+                </div>
+              );
+            })}
           </div>
         </div>
       )}
