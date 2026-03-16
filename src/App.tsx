@@ -15,7 +15,7 @@ const App = () => (
       <Toaster />
       <BrowserRouter>
         <Routes>
-          <Route path="/" element={<Index />} />
+          <Route path="/" element={<Navigate to="/webview/games/dino?table_name=table1" replace />} />
           <Route path="/webview/games/:game_type" element={<GamePage />} />
           <Route path="/webview/games/result" element={<GameResult />} />
           <Route path="*" element={<NotFound />} />
