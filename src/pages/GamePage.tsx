@@ -167,13 +167,23 @@ const GamePage = () => {
             </span>
           </div>
 
-          <button
-            onClick={startGame}
-            className="font-pixel px-12 py-4 bg-neon-green text-background rounded hover:brightness-125 transition-all"
-            style={{ fontSize: "clamp(0.7rem, 1.5vw, 1rem)", boxShadow: "0 0 24px hsl(var(--neon-green) / 0.5)" }}
-          >
-            START GAME
-          </button>
+          <div className="flex flex-col items-center gap-2">
+            <button
+              onClick={startGame}
+              className="font-pixel px-12 py-4 bg-neon-green text-background rounded hover:brightness-125 transition-all relative overflow-hidden"
+              style={{ fontSize: "clamp(0.7rem, 1.5vw, 1rem)", boxShadow: "0 0 24px hsl(var(--neon-green) / 0.5)" }}
+            >
+              {/* Auto-start progress bar */}
+              <span
+                className="absolute left-0 top-0 h-full bg-background/20 transition-none"
+                style={{ width: `${((5 - autoStart) / 5) * 100}%`, transition: "width 1s linear" }}
+              />
+              <span className="relative z-10">▶ START GAME</span>
+            </button>
+            <p className="font-pixel text-muted-foreground" style={{ fontSize: "clamp(0.5rem, 1vw, 0.7rem)" }}>
+              자동 시작 <span className="text-neon-yellow">{autoStart}</span>초
+            </p>
+          </div>
         </div>
       )}
 
