@@ -288,7 +288,7 @@ const GamePage = () => {
     return () => window.removeEventListener("keydown", onKey);
   }, [phase, handleIntroInteraction]);
 
-  // Countdown beeps + BGM start
+  // Countdown beeps + BGM (already started in intro, just ensure it's running)
   useEffect(() => {
     if (phase !== "countdown") return;
     playCountdownBeep(countdown);
@@ -297,7 +297,7 @@ const GamePage = () => {
       setShowGoal(false);
       goalPlayedRef.current = false;
       gameStartRef.current = Date.now();
-      // Start BGM
+      // BGM may already be running from intro; ensure it's started
       if (!bgmRef.current) bgmRef.current = new ChiptuneBGM();
       bgmRef.current.start();
       return;
