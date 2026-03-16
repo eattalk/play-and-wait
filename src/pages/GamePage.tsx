@@ -469,7 +469,27 @@ const GamePage = () => {
 
           {/* Game canvas */}
           <div className="flex-1 flex items-center justify-center px-4 pb-4">
-            <div className="w-full" style={{ maxWidth: "1100px" }}>
+            <div className="w-full relative" style={{ maxWidth: "1100px" }}>
+
+              {/* 타이머 — 게임 박스 왼쪽 상단 오버레이 */}
+              <div
+                className="absolute top-2 left-2 z-10 font-pixel flex flex-col items-center leading-none pointer-events-none"
+                style={{ lineHeight: 1 }}
+              >
+                <span style={{
+                  fontSize: "clamp(0.4rem, 0.7vw, 0.55rem)",
+                  color: "hsl(var(--muted-foreground))",
+                  letterSpacing: "0.12em",
+                  marginBottom: "2px",
+                }}>TIME</span>
+                <span style={{
+                  fontSize: "clamp(1.4rem, 3vw, 2.2rem)",
+                  color: remainingSecs <= 10 ? "#ff4444" : "hsl(var(--neon-green))",
+                  textShadow: remainingSecs <= 10 ? "0 0 22px #ff4444" : "0 0 16px hsl(var(--neon-green))",
+                  transition: "color 0.3s, text-shadow 0.3s",
+                  animation: remainingSecs <= 10 && remainingSecs > 0 ? "pulse 0.6s ease-in-out infinite" : "none",
+                }}>{remainingSecs}</span>
+              </div>
               <DinoGame
                 playing={phase === "playing"}
                 maxTime={MAX_GAME_TIME}
