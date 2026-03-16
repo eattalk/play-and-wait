@@ -180,7 +180,7 @@ class ChiptuneBGM {
 
 const MAX_TIME_BUFFER = 15;
 const MAX_GAME_TIME = 50;
-const GOAL_WARN_SECS = 7;
+const GOAL_WARN_SECS = 0;
 
 const GamePage = () => {
   const { game_type } = useParams();
