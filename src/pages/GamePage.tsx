@@ -3,13 +3,13 @@ import { useEffect, useRef, useState, useCallback } from "react";
 import DinoGame from "@/components/DinoGame";
 import GameDemoCanvas from "@/components/GameDemoCanvas";
 
-// ── Shared audio context (singleton) ─────────────────────────────────────────
-let _sharedCtx: AudioContext | null = null;
-function getSharedCtx(): AudioContext {
-  if (!_sharedCtx || _sharedCtx.state === "closed")
-    _sharedCtx = new (window.AudioContext || (window as any).webkitAudioContext)();
-  if (_sharedCtx.state === "suspended") _sharedCtx.resume();
-  return _sharedCtx;
+// ── Single shared AudioContext — created on first user interaction ────────────
+let _ac: AudioContext | null = null;
+function getAC(): AudioContext {
+  if (!_ac || _ac.state === "closed")
+    _ac = new (window.AudioContext || (window as any).webkitAudioContext)();
+  if (_ac.state === "suspended") _ac.resume();
+  return _ac;
 }
 
 // ── Intro jump sound ─────────────────────────────────────────────────────────
