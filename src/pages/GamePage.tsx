@@ -43,14 +43,39 @@ const GamePage = () => {
   const [score, setScore] = useState(0);
   const [gameTime, setGameTime] = useState(0);
   const [maxTime] = useState(90);
+  const [autoStart, setAutoStart] = useState(5);
   const waitTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const autoStartRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const gameStartRef = useRef<number>(0);
 
   const goToResult = useCallback((finalScore: number) => {
     navigate(`/webview/games/result?score=${finalScore}`);
   }, [navigate]);
 
-  const startGame = () => { setPhase("countdown"); setCountdown(3); };
+  const startGame = () => {
+    if (autoStartRef.current) { clearInterval(autoStartRef.current); autoStartRef.current = null; }
+    setPhase("countdown");
+    setCountdown(3);
+  };
+
+  // Auto-start countdown on instructions screen
+  useEffect(() => {
+    if (phase !== "instructions") return;
+    setAutoStart(5);
+    autoStartRef.current = setInterval(() => {
+      setAutoStart(prev => {
+        if (prev <= 1) {
+          clearInterval(autoStartRef.current!);
+          autoStartRef.current = null;
+          setPhase("countdown");
+          setCountdown(3);
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+    return () => { if (autoStartRef.current) clearInterval(autoStartRef.current); };
+  }, [phase]);
 
   useEffect(() => {
     if (phase !== "countdown") return;
