@@ -5,18 +5,97 @@ import GameDemoCanvas from "@/components/GameDemoCanvas";
 
 // ── Single shared AudioContext — created on first user interaction ─────────────
 let _ac: AudioContext | null = null;
-function getAC(): AudioContext {
+
+async function initAC(): Promise<AudioContext> {
   if (!_ac || _ac.state === "closed")
     _ac = new (window.AudioContext || (window as any).webkitAudioContext)();
-  if (_ac.state === "suspended") _ac.resume();
+  if (_ac.state === "suspended") await _ac.resume();
   return _ac;
+}
+
+function getAC(): AudioContext | null {
+  return (_ac && _ac.state === "running") ? _ac : null;
 }
 
 // ── Intro jump sound ──────────────────────────────────────────────────────────
 function playIntroJump() {
-  try {
-    const ctx = getAC();
-    const t = ctx.currentTime;
+  const ctx = getAC(); if (!ctx) return;
+  const t = ctx.currentTime;
+  const o1 = ctx.createOscillator(), g1 = ctx.createGain();
+  o1.type = "square";
+  o1.frequency.setValueAtTime(500, t);
+  o1.frequency.exponentialRampToValueAtTime(220, t + 0.18);
+  g1.gain.setValueAtTime(0.22, t);
+  g1.gain.exponentialRampToValueAtTime(0.001, t + 0.18);
+  o1.connect(g1); g1.connect(ctx.destination);
+  o1.start(t); o1.stop(t + 0.18);
+  const o2 = ctx.createOscillator(), g2 = ctx.createGain();
+  o2.type = "sine";
+  o2.frequency.setValueAtTime(900, t);
+  o2.frequency.exponentialRampToValueAtTime(400, t + 0.14);
+  g2.gain.setValueAtTime(0.10, t);
+  g2.gain.exponentialRampToValueAtTime(0.001, t + 0.14);
+  o2.connect(g2); g2.connect(ctx.destination);
+  o2.start(t); o2.stop(t + 0.14);
+}
+
+// ── 3-2-1 야무진 카운트다운 ───────────────────────────────────────────────────
+function playCountdownBeep(n: number) {
+  const ctx = getAC(); if (!ctx) return;
+  const t = ctx.currentTime;
+  if (n === 0) {
+    const chords = [[523,659,784],[659,784,988],[784,988,1175],[1047,1319,1568]] as number[][];
+    chords.forEach(([f1,f2,f3], i) => {
+      [f1,f2,f3].forEach(freq => {
+        const o = ctx.createOscillator(), g = ctx.createGain();
+        o.type = i < 2 ? "square" : "sawtooth";
+        o.frequency.setValueAtTime(freq, t + i * 0.08);
+        g.gain.setValueAtTime(0.18, t + i * 0.08);
+        g.gain.exponentialRampToValueAtTime(0.001, t + i * 0.08 + 0.22);
+        o.connect(g); g.connect(ctx.destination);
+        o.start(t + i * 0.08); o.stop(t + i * 0.08 + 0.22);
+      });
+    });
+    const buf = ctx.createBuffer(1, ctx.sampleRate * 0.08, ctx.sampleRate);
+    const d = buf.getChannelData(0);
+    for (let i = 0; i < d.length; i++) d[i] = (Math.random()*2-1)*(1-i/d.length);
+    const ns = ctx.createBufferSource(), ng = ctx.createGain();
+    ns.buffer = buf;
+    ng.gain.setValueAtTime(0.5, t); ng.gain.exponentialRampToValueAtTime(0.001, t+0.08);
+    ns.connect(ng); ng.connect(ctx.destination); ns.start(t);
+  } else {
+    const baseFreq = [220,330,440][n-1] ?? 440;
+    const o1 = ctx.createOscillator(), g1 = ctx.createGain();
+    o1.type = "square";
+    o1.frequency.setValueAtTime(baseFreq*2, t);
+    o1.frequency.exponentialRampToValueAtTime(baseFreq, t+0.22);
+    g1.gain.setValueAtTime(0.35, t); g1.gain.exponentialRampToValueAtTime(0.001, t+0.28);
+    o1.connect(g1); g1.connect(ctx.destination); o1.start(t); o1.stop(t+0.28);
+    const o2 = ctx.createOscillator(), g2 = ctx.createGain();
+    o2.type = "sine"; o2.frequency.setValueAtTime(baseFreq*0.5, t);
+    g2.gain.setValueAtTime(0.25, t); g2.gain.exponentialRampToValueAtTime(0.001, t+0.30);
+    o2.connect(g2); g2.connect(ctx.destination); o2.start(t); o2.stop(t+0.30);
+    const buf = ctx.createBuffer(1, ctx.sampleRate*0.04, ctx.sampleRate);
+    const d = buf.getChannelData(0);
+    for (let i = 0; i < d.length; i++) d[i] = (Math.random()*2-1)*(1-i/d.length);
+    const ns = ctx.createBufferSource(), ng = ctx.createGain();
+    ns.buffer = buf;
+    ng.gain.setValueAtTime(0.28, t); ng.gain.exponentialRampToValueAtTime(0.001, t+0.04);
+    ns.connect(ng); ng.connect(ctx.destination); ns.start(t);
+  }
+}
+
+// ── Goal fanfare ──────────────────────────────────────────────────────────────
+function playGoalFanfare() {
+  const ctx = getAC(); if (!ctx) return;
+  const t = ctx.currentTime;
+  [523,659,784,1047].forEach((freq,i) => {
+    const o = ctx.createOscillator(), g = ctx.createGain();
+    o.type = "square"; o.frequency.setValueAtTime(freq, t+i*0.12);
+    g.gain.setValueAtTime(0.22, t+i*0.12); g.gain.exponentialRampToValueAtTime(0.001, t+i*0.12+0.25);
+    o.connect(g); g.connect(ctx.destination); o.start(t+i*0.12); o.stop(t+i*0.12+0.25);
+  });
+}
     const o1 = ctx.createOscillator(), g1 = ctx.createGain();
     o1.type = "square";
     o1.frequency.setValueAtTime(500, t);
