@@ -121,8 +121,8 @@ const STAR_SPAWN_INTERVAL = 1.1;
 const DUST_VX = 180, DUST_VY = -130, DUST_G = 360, DUST_DECAY = 2.8;
 const STAR_SPIN = 3.2;
 
-// 난이도: EVO_EVERY 장애물마다 변신 (더 자주 변신)
-const EVO_EVERY = 2;
+// 난이도: EVO_EVERY 장애물마다 변신 (최소 4개)
+const EVO_EVERY = 4;
 const EVO_MAX = 11;
 
 // 12단계 변신 (기존 10 → 12단계, 더 화려)
@@ -676,34 +676,39 @@ const DinoGame = ({ playing, maxTime, onScoreChange, onTimeChange, onGameOver }:
     }
 
     function randomObsInterval() {
-      // 점프 체공시간(≈0.70s) + 착지후 반응 여유(0.30s) = 최소 1.00s 보장
+      // 점프 체공시간(≈0.70s) + 착지 반응 여유 → 최소 안전 간격
       const jumpAirTime = (Math.abs(JUMP_VEL) * 2) / GRAVITY; // ~0.698s
-      const MIN_SAFE = jumpAirTime + 0.30;                      // ~1.00s
-      // 속도가 빠를수록 간격 더 짧아져서 더 빡빡해짐
-      const base = 1.55 - (s.speed - BASE_SPEED) / 220;
-      const raw  = base * (0.65 + Math.random() * 0.45);
+      const MIN_SAFE = jumpAirTime + 0.22;                      // ~0.92s (더 빡빡하게)
+      // 속도 가속에 따라 간격이 훨씬 빠르게 줄어듦
+      const base = 1.35 - (s.speed - BASE_SPEED) / 160;
+      const raw  = base * (0.55 + Math.random() * 0.40);
       return Math.max(MIN_SAFE, raw);
     }
 
     function spawnWave() {
-      const h = Math.random() * 38 + 26;
+      const h = Math.random() * 40 + 28;
       s.obstacles.push({ x: CANVAS_W + 10, w: 36, h, type: "cactus", y: GROUND_Y - h, passed: false });
-      // 속도 400 이상: 30% 확률로 쌍선인장
-      if (s.speed > 400 && Math.random() < 0.30) {
-        const gap = 58 + Math.random() * 40;
-        const h2 = Math.random() * 32 + 26;
+      // 속도 320 이상: 40% 확률로 쌍선인장 (더 일찍, 더 높은 확률)
+      if (s.speed > 320 && Math.random() < 0.40) {
+        const gap = 52 + Math.random() * 36;
+        const h2 = Math.random() * 36 + 26;
         s.obstacles.push({ x: CANVAS_W + 10 + gap, w: 36, h: h2, type: "cactus", y: GROUND_Y - h2, passed: false });
       }
-      // 속도 600 이상: 40% 확률로 쌍선인장
-      if (s.speed > 600 && Math.random() < 0.40) {
-        const gap = 55 + Math.random() * 38;
-        const h2 = Math.random() * 34 + 26;
+      // 속도 500 이상: 55% 확률로 쌍선인장
+      if (s.speed > 500 && Math.random() < 0.55) {
+        const gap = 48 + Math.random() * 34;
+        const h2 = Math.random() * 38 + 26;
         s.obstacles.push({ x: CANVAS_W + 10 + gap, w: 36, h: h2, type: "cactus", y: GROUND_Y - h2, passed: false });
       }
-      // 속도 800 이상: 25% 확률로 3연속
-      if (s.speed > 800 && Math.random() < 0.25) {
-        const h3 = Math.random() * 28 + 26;
-        s.obstacles.push({ x: CANVAS_W + 110 + Math.random() * 28, w: 36, h: h3, type: "cactus", y: GROUND_Y - h3, passed: false });
+      // 속도 700 이상: 40% 확률로 3연속
+      if (s.speed > 700 && Math.random() < 0.40) {
+        const h3 = Math.random() * 32 + 26;
+        s.obstacles.push({ x: CANVAS_W + 100 + Math.random() * 24, w: 36, h: h3, type: "cactus", y: GROUND_Y - h3, passed: false });
+      }
+      // 속도 1000 이상: 20% 확률로 4연속
+      if (s.speed > 1000 && Math.random() < 0.20) {
+        const h4 = Math.random() * 30 + 26;
+        s.obstacles.push({ x: CANVAS_W + 160 + Math.random() * 20, w: 36, h: h4, type: "cactus", y: GROUND_Y - h4, passed: false });
       }
     }
 
@@ -737,11 +742,11 @@ const DinoGame = ({ playing, maxTime, onScoreChange, onTimeChange, onGameOver }:
         s.gameOver = true; createHitSound(getAudio()); onGameOver(s.score); return;
       }
 
-      // 난이도 가속: 초반 완만 → 중반 급격히 → 후반 극한
-      // speed = BASE + 선형(t*22) + 지수(e^(t/22)-1)*160
+      // 난이도 가속: 초반부터 빠르게, 중반 급격히, 후반 극한
+      // speed = BASE + 선형(t*35) + 지수(e^(t/15)-1)*220
       s.speed = BASE_SPEED
-        + s.elapsed * 22
-        + (Math.exp(s.elapsed / 22) - 1) * 160;
+        + s.elapsed * 35
+        + (Math.exp(s.elapsed / 15) - 1) * 220;
 
       const speedTier = Math.floor((s.speed - BASE_SPEED) / 80);
       if (speedTier > s.lastSpeedTier) { createSpeedUpSound(getAudio()); s.lastSpeedTier = speedTier; }
