@@ -686,24 +686,29 @@ const DinoGame = ({ playing, maxTime, onScoreChange, onTimeChange, onGameOver }:
     }
 
     function spawnWave() {
-      const h = Math.random() * 38 + 26;
+      const h = Math.random() * 40 + 28;
       s.obstacles.push({ x: CANVAS_W + 10, w: 36, h, type: "cactus", y: GROUND_Y - h, passed: false });
-      // 속도 400 이상: 30% 확률로 쌍선인장
-      if (s.speed > 400 && Math.random() < 0.30) {
-        const gap = 58 + Math.random() * 40;
-        const h2 = Math.random() * 32 + 26;
+      // 속도 320 이상: 40% 확률로 쌍선인장 (더 일찍, 더 높은 확률)
+      if (s.speed > 320 && Math.random() < 0.40) {
+        const gap = 52 + Math.random() * 36;
+        const h2 = Math.random() * 36 + 26;
         s.obstacles.push({ x: CANVAS_W + 10 + gap, w: 36, h: h2, type: "cactus", y: GROUND_Y - h2, passed: false });
       }
-      // 속도 600 이상: 40% 확률로 쌍선인장
-      if (s.speed > 600 && Math.random() < 0.40) {
-        const gap = 55 + Math.random() * 38;
-        const h2 = Math.random() * 34 + 26;
+      // 속도 500 이상: 55% 확률로 쌍선인장
+      if (s.speed > 500 && Math.random() < 0.55) {
+        const gap = 48 + Math.random() * 34;
+        const h2 = Math.random() * 38 + 26;
         s.obstacles.push({ x: CANVAS_W + 10 + gap, w: 36, h: h2, type: "cactus", y: GROUND_Y - h2, passed: false });
       }
-      // 속도 800 이상: 25% 확률로 3연속
-      if (s.speed > 800 && Math.random() < 0.25) {
-        const h3 = Math.random() * 28 + 26;
-        s.obstacles.push({ x: CANVAS_W + 110 + Math.random() * 28, w: 36, h: h3, type: "cactus", y: GROUND_Y - h3, passed: false });
+      // 속도 700 이상: 40% 확률로 3연속
+      if (s.speed > 700 && Math.random() < 0.40) {
+        const h3 = Math.random() * 32 + 26;
+        s.obstacles.push({ x: CANVAS_W + 100 + Math.random() * 24, w: 36, h: h3, type: "cactus", y: GROUND_Y - h3, passed: false });
+      }
+      // 속도 1000 이상: 20% 확률로 4연속
+      if (s.speed > 1000 && Math.random() < 0.20) {
+        const h4 = Math.random() * 30 + 26;
+        s.obstacles.push({ x: CANVAS_W + 160 + Math.random() * 20, w: 36, h: h4, type: "cactus", y: GROUND_Y - h4, passed: false });
       }
     }
 
