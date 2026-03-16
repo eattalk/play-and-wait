@@ -742,11 +742,11 @@ const DinoGame = ({ playing, maxTime, onScoreChange, onTimeChange, onGameOver }:
         s.gameOver = true; createHitSound(getAudio()); onGameOver(s.score); return;
       }
 
-      // 난이도 가속: 초반 완만 → 중반 급격히 → 후반 극한
-      // speed = BASE + 선형(t*22) + 지수(e^(t/22)-1)*160
+      // 난이도 가속: 초반부터 빠르게, 중반 급격히, 후반 극한
+      // speed = BASE + 선형(t*35) + 지수(e^(t/15)-1)*220
       s.speed = BASE_SPEED
-        + s.elapsed * 22
-        + (Math.exp(s.elapsed / 22) - 1) * 160;
+        + s.elapsed * 35
+        + (Math.exp(s.elapsed / 15) - 1) * 220;
 
       const speedTier = Math.floor((s.speed - BASE_SPEED) / 80);
       if (speedTier > s.lastSpeedTier) { createSpeedUpSound(getAudio()); s.lastSpeedTier = speedTier; }
