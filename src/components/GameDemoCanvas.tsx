@@ -38,10 +38,22 @@ function playDemoStar(ctx: AudioContext) {
   osc.start(ctx.currentTime); osc.stop(ctx.currentTime + 0.15);
 }
 
-const GameDemoCanvas = () => {
+interface GameDemoCanvasProps {
+  unlocked?: boolean;
+}
+
+const GameDemoCanvas = ({ unlocked = false }: GameDemoCanvasProps) => {
   const ref = useRef<HTMLCanvasElement>(null);
   const rafRef = useRef(0);
   const audioRef = useRef<AudioContext | null>(null);
+
+  // Resume audio context when parent unlocks (user interacted)
+  useEffect(() => {
+    if (!unlocked) return;
+    if (!audioRef.current)
+      audioRef.current = new (window.AudioContext || (window as any).webkitAudioContext)();
+    if (audioRef.current.state === "suspended") audioRef.current.resume();
+  }, [unlocked]);
 
   useEffect(() => {
     const canvas = ref.current;
