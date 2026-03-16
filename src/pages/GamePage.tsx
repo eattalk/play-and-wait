@@ -43,14 +43,39 @@ const GamePage = () => {
   const [score, setScore] = useState(0);
   const [gameTime, setGameTime] = useState(0);
   const [maxTime] = useState(90);
+  const [autoStart, setAutoStart] = useState(5);
   const waitTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const autoStartRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const gameStartRef = useRef<number>(0);
 
   const goToResult = useCallback((finalScore: number) => {
     navigate(`/webview/games/result?score=${finalScore}`);
   }, [navigate]);
 
-  const startGame = () => { setPhase("countdown"); setCountdown(3); };
+  const startGame = () => {
+    if (autoStartRef.current) { clearInterval(autoStartRef.current); autoStartRef.current = null; }
+    setPhase("countdown");
+    setCountdown(3);
+  };
+
+  // Auto-start countdown on instructions screen
+  useEffect(() => {
+    if (phase !== "instructions") return;
+    setAutoStart(5);
+    autoStartRef.current = setInterval(() => {
+      setAutoStart(prev => {
+        if (prev <= 1) {
+          clearInterval(autoStartRef.current!);
+          autoStartRef.current = null;
+          setPhase("countdown");
+          setCountdown(3);
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+    return () => { if (autoStartRef.current) clearInterval(autoStartRef.current); };
+  }, [phase]);
 
   useEffect(() => {
     if (phase !== "countdown") return;
@@ -142,13 +167,23 @@ const GamePage = () => {
             </span>
           </div>
 
-          <button
-            onClick={startGame}
-            className="font-pixel px-12 py-4 bg-neon-green text-background rounded hover:brightness-125 transition-all"
-            style={{ fontSize: "clamp(0.7rem, 1.5vw, 1rem)", boxShadow: "0 0 24px hsl(var(--neon-green) / 0.5)" }}
-          >
-            START GAME
-          </button>
+          <div className="flex flex-col items-center gap-2">
+            <button
+              onClick={startGame}
+              className="font-pixel px-12 py-4 bg-neon-green text-background rounded hover:brightness-125 transition-all relative overflow-hidden"
+              style={{ fontSize: "clamp(0.7rem, 1.5vw, 1rem)", boxShadow: "0 0 24px hsl(var(--neon-green) / 0.5)" }}
+            >
+              {/* Auto-start progress bar */}
+              <span
+                className="absolute left-0 top-0 h-full bg-background/20 transition-none"
+                style={{ width: `${((5 - autoStart) / 5) * 100}%`, transition: "width 1s linear" }}
+              />
+              <span className="relative z-10">▶ START GAME</span>
+            </button>
+            <p className="font-pixel text-muted-foreground" style={{ fontSize: "clamp(0.5rem, 1vw, 0.7rem)" }}>
+              자동 시작 <span className="text-neon-yellow">{autoStart}</span>초
+            </p>
+          </div>
         </div>
       )}
 
