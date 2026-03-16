@@ -3,31 +3,105 @@ import { useEffect, useRef, useState, useCallback } from "react";
 import DinoGame from "@/components/DinoGame";
 import GameDemoCanvas from "@/components/GameDemoCanvas";
 
-// ── Countdown beeps ────────────────────────────────────────────────────────────
+// ── Shared audio context (singleton) ─────────────────────────────────────────
+let _sharedCtx: AudioContext | null = null;
+function getSharedCtx(): AudioContext {
+  if (!_sharedCtx || _sharedCtx.state === "closed")
+    _sharedCtx = new (window.AudioContext || (window as any).webkitAudioContext)();
+  if (_sharedCtx.state === "suspended") _sharedCtx.resume();
+  return _sharedCtx;
+}
+
+// ── Intro jump sound ─────────────────────────────────────────────────────────
+function playIntroJump() {
+  try {
+    const ctx = getSharedCtx();
+    const t = ctx.currentTime;
+    // Layer 1: punchy square sweep
+    const o1 = ctx.createOscillator(), g1 = ctx.createGain();
+    o1.type = "square";
+    o1.frequency.setValueAtTime(500, t);
+    o1.frequency.exponentialRampToValueAtTime(220, t + 0.18);
+    g1.gain.setValueAtTime(0.22, t);
+    g1.gain.exponentialRampToValueAtTime(0.001, t + 0.18);
+    o1.connect(g1); g1.connect(ctx.destination);
+    o1.start(t); o1.stop(t + 0.18);
+    // Layer 2: sine shimmer
+    const o2 = ctx.createOscillator(), g2 = ctx.createGain();
+    o2.type = "sine";
+    o2.frequency.setValueAtTime(900, t);
+    o2.frequency.exponentialRampToValueAtTime(400, t + 0.14);
+    g2.gain.setValueAtTime(0.10, t);
+    g2.gain.exponentialRampToValueAtTime(0.001, t + 0.14);
+    o2.connect(g2); g2.connect(ctx.destination);
+    o2.start(t); o2.stop(t + 0.14);
+  } catch (_) { /* ignore */ }
+}
+
+// ── 3-2-1 야무진 카운트다운 ────────────────────────────────────────────────────
 function playCountdownBeep(n: number) {
   try {
-    const ctx = new (window.AudioContext || (window as any).webkitAudioContext)();
-    const osc = ctx.createOscillator();
-    const gain = ctx.createGain();
-    osc.connect(gain); gain.connect(ctx.destination);
+    const ctx = getSharedCtx();
+    const t = ctx.currentTime;
+
     if (n === 0) {
-      osc.type = "square";
-      osc.frequency.setValueAtTime(440, ctx.currentTime);
-      osc.frequency.setValueAtTime(660, ctx.currentTime + 0.07);
-      osc.frequency.setValueAtTime(880, ctx.currentTime + 0.14);
-      gain.gain.setValueAtTime(0.22, ctx.currentTime);
-      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.4);
-      osc.start(ctx.currentTime); osc.stop(ctx.currentTime + 0.4);
+      // GO! — 4단 상승 팡파레 + 노이즈 펀치
+      const chords = [
+        [523, 659, 784],   // C maj
+        [659, 784, 988],   // E-based
+        [784, 988, 1175],  // G-based
+        [1047, 1319, 1568],// High C maj
+      ];
+      chords.forEach(([f1, f2, f3], i) => {
+        [f1, f2, f3].forEach(freq => {
+          const o = ctx.createOscillator(), g = ctx.createGain();
+          o.type = i < 2 ? "square" : "sawtooth";
+          o.frequency.setValueAtTime(freq, t + i * 0.08);
+          g.gain.setValueAtTime(0.18, t + i * 0.08);
+          g.gain.exponentialRampToValueAtTime(0.001, t + i * 0.08 + 0.22);
+          o.connect(g); g.connect(ctx.destination);
+          o.start(t + i * 0.08); o.stop(t + i * 0.08 + 0.22);
+        });
+      });
+      // 노이즈 펀치
+      const buf = ctx.createBuffer(1, ctx.sampleRate * 0.08, ctx.sampleRate);
+      const d = buf.getChannelData(0);
+      for (let i = 0; i < d.length; i++) d[i] = (Math.random() * 2 - 1) * (1 - i / d.length);
+      const ns = ctx.createBufferSource(), ng = ctx.createGain();
+      ns.buffer = buf; ng.gain.setValueAtTime(0.5, t); ng.gain.exponentialRampToValueAtTime(0.001, t + 0.08);
+      ns.connect(ng); ng.connect(ctx.destination); ns.start(t);
     } else {
-      osc.type = "sine";
-      const freq = 330 + n * 110;
-      osc.frequency.setValueAtTime(freq, ctx.currentTime);
-      osc.frequency.exponentialRampToValueAtTime(freq * 0.9, ctx.currentTime + 0.12);
-      gain.gain.setValueAtTime(0.28, ctx.currentTime);
-      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.18);
-      osc.start(ctx.currentTime); osc.stop(ctx.currentTime + 0.18);
+      // 3, 2, 1 — 각 숫자마다 점점 높아지는 두꺼운 틱 사운드
+      const baseFreq = [220, 330, 440][n - 1] ?? 440;  // 1→440, 2→330, 3→220
+      const highFreq = baseFreq * 2;
+
+      // 메인 펄스 (square)
+      const o1 = ctx.createOscillator(), g1 = ctx.createGain();
+      o1.type = "square";
+      o1.frequency.setValueAtTime(highFreq, t);
+      o1.frequency.exponentialRampToValueAtTime(baseFreq, t + 0.22);
+      g1.gain.setValueAtTime(0.35, t);
+      g1.gain.exponentialRampToValueAtTime(0.001, t + 0.28);
+      o1.connect(g1); g1.connect(ctx.destination);
+      o1.start(t); o1.stop(t + 0.28);
+
+      // 서브 베이스 (sine, 한 옥타브 아래)
+      const o2 = ctx.createOscillator(), g2 = ctx.createGain();
+      o2.type = "sine";
+      o2.frequency.setValueAtTime(baseFreq * 0.5, t);
+      g2.gain.setValueAtTime(0.25, t);
+      g2.gain.exponentialRampToValueAtTime(0.001, t + 0.30);
+      o2.connect(g2); g2.connect(ctx.destination);
+      o2.start(t); o2.stop(t + 0.30);
+
+      // 짧은 노이즈 어택
+      const buf = ctx.createBuffer(1, ctx.sampleRate * 0.04, ctx.sampleRate);
+      const d = buf.getChannelData(0);
+      for (let i = 0; i < d.length; i++) d[i] = (Math.random() * 2 - 1) * (1 - i / d.length);
+      const ns = ctx.createBufferSource(), ng = ctx.createGain();
+      ns.buffer = buf; ng.gain.setValueAtTime(0.28, t); ng.gain.exponentialRampToValueAtTime(0.001, t + 0.04);
+      ns.connect(ng); ng.connect(ctx.destination); ns.start(t);
     }
-    setTimeout(() => ctx.close(), 1000);
   } catch (_) { /* ignore */ }
 }
 
@@ -44,18 +118,6 @@ function playGoalFanfare(ctx: AudioContext) {
     g.gain.exponentialRampToValueAtTime(0.001, t + i * 0.12 + 0.25);
     osc.start(t + i * 0.12); osc.stop(t + i * 0.12 + 0.25);
   });
-}
-
-// ── Intro jump sound ───────────────────────────────────────────────────────────
-function playIntroJump(ctx: AudioContext) {
-  const osc = ctx.createOscillator(), g = ctx.createGain();
-  osc.connect(g); g.connect(ctx.destination);
-  osc.type = "square";
-  osc.frequency.setValueAtTime(380, ctx.currentTime);
-  osc.frequency.exponentialRampToValueAtTime(190, ctx.currentTime + 0.13);
-  g.gain.setValueAtTime(0.14, ctx.currentTime);
-  g.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.13);
-  osc.start(ctx.currentTime); osc.stop(ctx.currentTime + 0.13);
 }
 
 // ── Chiptune BGM ──────────────────────────────────────────────────────────────
