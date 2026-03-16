@@ -229,18 +229,17 @@ const GamePage = () => {
   const [gameTime, setGameTime] = useState(0);
   const [autoStart, setAutoStart] = useState(5);
   const [showGoal, setShowGoal] = useState(false);
+  const [audioUnlocked, setAudioUnlocked] = useState(false);
   const waitTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const autoStartRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const gameStartRef = useRef<number>(0);
   const bgmRef = useRef<ChiptuneBGM | null>(null);
-  const audioCtxRef = useRef<AudioContext | null>(null);
   const goalPlayedRef = useRef(false);
 
-  const getAudioCtx = useCallback(() => {
-    if (!audioCtxRef.current)
-      audioCtxRef.current = new (window.AudioContext || (window as any).webkitAudioContext)();
-    if (audioCtxRef.current.state === "suspended") audioCtxRef.current.resume();
-    return audioCtxRef.current;
+  const unlockAndStartIntroBGM = useCallback(() => {
+    if (!bgmRef.current) bgmRef.current = new ChiptuneBGM();
+    bgmRef.current.start();
+    setAudioUnlocked(true);
   }, []);
 
   const goToResult = useCallback((finalScore: number) => {
@@ -254,10 +253,11 @@ const GamePage = () => {
     setCountdown(3);
   };
 
-  // Intro jump sound on click/tap/space
+  // Intro click/tap/space → jump sound + unlock audio
   const handleIntroInteraction = useCallback(() => {
     playIntroJump();
-  }, []);
+    unlockAndStartIntroBGM();
+  }, [unlockAndStartIntroBGM]);
 
   // Auto-start countdown on instructions screen
   useEffect(() => {
