@@ -433,7 +433,7 @@ const GamePage = () => {
 
           <div className="flex flex-col items-center gap-2">
             <button
-              onClick={e => { e.stopPropagation(); handleIntroInteraction().then(() => startGame()); }}
+              onClick={e => { e.stopPropagation(); handleIntroInteraction(); startGame(); }}
               className="font-pixel px-12 py-4 bg-neon-green text-background rounded hover:brightness-125 transition-all relative overflow-hidden"
               style={{ fontSize: "clamp(0.7rem, 1.5vw, 1rem)", boxShadow: "0 0 24px hsl(var(--neon-green) / 0.5)" }}
             >
