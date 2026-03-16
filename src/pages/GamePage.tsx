@@ -280,15 +280,18 @@ const GamePage = () => {
     setCountdown(3);
   };
 
-  // ── 첫 클릭: AudioContext resume() await 후 점프음 + 인트로 BGM 시작 ─────────
-  const handleIntroInteraction = useCallback(async () => {
-    try {
-      await initAC();
-      playIntroJump();
-      if (!introBgmRef.current) introBgmRef.current = new ChiptuneBGM();
-      introBgmRef.current.start();
-      setAudioUnlocked(true);
-    } catch (_) { /* ignore */ }
+  // ── 첫 탭/클릭: 동기 unlock → rAF 후 사운드 재생 (iOS 호환) ──────────────────
+  const handleIntroInteraction = useCallback(() => {
+    unlockAudio(); // 반드시 제스처 핸들러 안에서 동기 호출
+    // unlock 직후 AudioContext가 running 상태가 될 때까지 짧게 대기
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        playIntroJump();
+        if (!introBgmRef.current) introBgmRef.current = new ChiptuneBGM();
+        introBgmRef.current.start();
+        setAudioUnlocked(true);
+      });
+    });
   }, []);
 
   // Auto-start
