@@ -3,17 +3,24 @@ import { useEffect, useRef, useState, useCallback } from "react";
 import DinoGame from "@/components/DinoGame";
 import GameDemoCanvas from "@/components/GameDemoCanvas";
 
-// ─── Shared AudioContext — 반드시 resume() await 후 사용 ──────────────────────
+// ─── Shared AudioContext — 모바일(iOS) 호환 unlock ──────────────────────────
 let _ac: AudioContext | null = null;
 
-async function initAC(): Promise<AudioContext> {
+// 반드시 사용자 제스처 핸들러 안에서 동기적으로 호출해야 iOS에서 작동함
+function unlockAudio() {
   if (!_ac || _ac.state === "closed")
     _ac = new (window.AudioContext || (window as any).webkitAudioContext)();
-  if (_ac.state === "suspended") await _ac.resume();
-  return _ac;
+  // resume()은 await 없이 즉시 호출 — iOS Safari는 동기 체인 필요
+  if (_ac.state === "suspended") _ac.resume();
+  // iOS를 위한 silent buffer 재생 (오디오 완전 해제)
+  try {
+    const buf = _ac.createBuffer(1, 1, 22050);
+    const src = _ac.createBufferSource();
+    src.buffer = buf; src.connect(_ac.destination); src.start(0);
+  } catch (_) { /* ignore */ }
 }
 
-// running 상태일 때만 반환 (비동기 없이 즉시 사용 가능한 ctx)
+// running 상태일 때만 반환
 function getAC(): AudioContext | null {
   return _ac && _ac.state === "running" ? _ac : null;
 }
@@ -273,15 +280,18 @@ const GamePage = () => {
     setCountdown(3);
   };
 
-  // ── 첫 클릭: AudioContext resume() await 후 점프음 + 인트로 BGM 시작 ─────────
-  const handleIntroInteraction = useCallback(async () => {
-    try {
-      await initAC();
-      playIntroJump();
-      if (!introBgmRef.current) introBgmRef.current = new ChiptuneBGM();
-      introBgmRef.current.start();
-      setAudioUnlocked(true);
-    } catch (_) { /* ignore */ }
+  // ── 첫 탭/클릭: 동기 unlock → rAF 후 사운드 재생 (iOS 호환) ──────────────────
+  const handleIntroInteraction = useCallback(() => {
+    unlockAudio(); // 반드시 제스처 핸들러 안에서 동기 호출
+    // unlock 직후 AudioContext가 running 상태가 될 때까지 짧게 대기
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        playIntroJump();
+        if (!introBgmRef.current) introBgmRef.current = new ChiptuneBGM();
+        introBgmRef.current.start();
+        setAudioUnlocked(true);
+      });
+    });
   }, []);
 
   // Auto-start
@@ -423,7 +433,7 @@ const GamePage = () => {
 
           <div className="flex flex-col items-center gap-2">
             <button
-              onClick={e => { e.stopPropagation(); handleIntroInteraction().then(() => startGame()); }}
+              onClick={e => { e.stopPropagation(); handleIntroInteraction(); startGame(); }}
               className="font-pixel px-12 py-4 bg-neon-green text-background rounded hover:brightness-125 transition-all relative overflow-hidden"
               style={{ fontSize: "clamp(0.7rem, 1.5vw, 1rem)", boxShadow: "0 0 24px hsl(var(--neon-green) / 0.5)" }}
             >
