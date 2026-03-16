@@ -47,12 +47,13 @@ const GameDemoCanvas = ({ unlocked = false }: GameDemoCanvasProps) => {
   const rafRef = useRef(0);
   const audioRef = useRef<AudioContext | null>(null);
 
-  // Resume audio context when parent unlocks (user interacted)
+  // 부모에서 오디오 잠금 해제 신호 오면 즉시 AudioContext resume
   useEffect(() => {
     if (!unlocked) return;
-    if (!audioRef.current)
+    if (!audioRef.current) {
       audioRef.current = new (window.AudioContext || (window as any).webkitAudioContext)();
-    if (audioRef.current.state === "suspended") audioRef.current.resume();
+    }
+    audioRef.current.resume();
   }, [unlocked]);
 
   useEffect(() => {
@@ -60,10 +61,13 @@ const GameDemoCanvas = ({ unlocked = false }: GameDemoCanvasProps) => {
     if (!canvas) return;
     const ctx = canvas.getContext("2d")!;
 
-    const getAudio = () => {
-      if (!audioRef.current)
-        audioRef.current = new (window.AudioContext || (window as any).webkitAudioContext)();
-      if (audioRef.current.state === "suspended") audioRef.current.resume();
+    // AudioContext는 unlocked 신호 후 audioRef.current에 준비됨
+    const getAudio = (): AudioContext | null => {
+      if (!audioRef.current) return null;
+      if (audioRef.current.state === "suspended") {
+        audioRef.current.resume();
+        return null; // suspended 중엔 소리 안냄
+      }
       return audioRef.current;
     };
 
@@ -89,7 +93,8 @@ const GameDemoCanvas = ({ unlocked = false }: GameDemoCanvasProps) => {
           s.dvy = JV;
           s.nextJump = 1.0 + Math.random() * 0.7;
           s.autoTimer = 0;
-          try { playDemoJump(getAudio()); } catch (_) { /* ignore */ }
+          const ac = getAudio();
+          if (ac) try { playDemoJump(ac); } catch (_) { /* ignore */ }
         }
       }
 
@@ -97,7 +102,10 @@ const GameDemoCanvas = ({ unlocked = false }: GameDemoCanvasProps) => {
       s.dvy += GRAV * dt; s.dy += s.dvy * dt;
       if (s.dy >= GY - DH) {
         s.dy = GY - DH; s.dvy = 0;
-        if (!wasGround) try { playDemoLand(getAudio()); } catch (_) { /* ignore */ }
+        if (!wasGround) {
+          const ac = getAudio();
+          if (ac) try { playDemoLand(ac); } catch (_) { /* ignore */ }
+        }
       }
 
       s.obsTimer += dt;
@@ -112,7 +120,8 @@ const GameDemoCanvas = ({ unlocked = false }: GameDemoCanvasProps) => {
       s.stars = s.stars.filter(st => {
         st.x -= s.speed * dt; st.angle += 3 * dt;
         if (Math.abs(st.x - (DX + DW / 2)) < 22 && Math.abs(st.y - (s.dy + DH / 2)) < 24) {
-          try { playDemoStar(getAudio()); } catch (_) { /* ignore */ }
+          const ac = getAudio();
+          if (ac) try { playDemoStar(ac); } catch (_) { /* ignore */ }
           return false;
         }
         return st.x > -30;
