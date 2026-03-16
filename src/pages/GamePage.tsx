@@ -3,7 +3,7 @@ import { useEffect, useRef, useState, useCallback } from "react";
 import DinoGame from "@/components/DinoGame";
 import GameDemoCanvas from "@/components/GameDemoCanvas";
 
-// ── Single shared AudioContext — created on first user interaction ────────────
+// ── Single shared AudioContext — created on first user interaction ─────────────
 let _ac: AudioContext | null = null;
 function getAC(): AudioContext {
   if (!_ac || _ac.state === "closed")
@@ -12,12 +12,11 @@ function getAC(): AudioContext {
   return _ac;
 }
 
-// ── Intro jump sound ─────────────────────────────────────────────────────────
+// ── Intro jump sound ──────────────────────────────────────────────────────────
 function playIntroJump() {
   try {
-    const ctx = getSharedCtx();
+    const ctx = getAC();
     const t = ctx.currentTime;
-    // Layer 1: punchy square sweep
     const o1 = ctx.createOscillator(), g1 = ctx.createGain();
     o1.type = "square";
     o1.frequency.setValueAtTime(500, t);
@@ -26,7 +25,6 @@ function playIntroJump() {
     g1.gain.exponentialRampToValueAtTime(0.001, t + 0.18);
     o1.connect(g1); g1.connect(ctx.destination);
     o1.start(t); o1.stop(t + 0.18);
-    // Layer 2: sine shimmer
     const o2 = ctx.createOscillator(), g2 = ctx.createGain();
     o2.type = "sine";
     o2.frequency.setValueAtTime(900, t);
@@ -38,22 +36,15 @@ function playIntroJump() {
   } catch (_) { /* ignore */ }
 }
 
-// ── 3-2-1 야무진 카운트다운 ────────────────────────────────────────────────────
+// ── 3-2-1 야무진 카운트다운 ───────────────────────────────────────────────────
 function playCountdownBeep(n: number) {
   try {
-    const ctx = getSharedCtx();
+    const ctx = getAC();
     const t = ctx.currentTime;
-
     if (n === 0) {
-      // GO! — 4단 상승 팡파레 + 노이즈 펀치
-      const chords = [
-        [523, 659, 784],   // C maj
-        [659, 784, 988],   // E-based
-        [784, 988, 1175],  // G-based
-        [1047, 1319, 1568],// High C maj
-      ];
-      chords.forEach(([f1, f2, f3], i) => {
-        [f1, f2, f3].forEach(freq => {
+      const chords = [[523,659,784],[659,784,988],[784,988,1175],[1047,1319,1568]] as number[][];
+      chords.forEach(([f1,f2,f3], i) => {
+        [f1,f2,f3].forEach(freq => {
           const o = ctx.createOscillator(), g = ctx.createGain();
           o.type = i < 2 ? "square" : "sawtooth";
           o.frequency.setValueAtTime(freq, t + i * 0.08);
@@ -63,125 +54,107 @@ function playCountdownBeep(n: number) {
           o.start(t + i * 0.08); o.stop(t + i * 0.08 + 0.22);
         });
       });
-      // 노이즈 펀치
       const buf = ctx.createBuffer(1, ctx.sampleRate * 0.08, ctx.sampleRate);
       const d = buf.getChannelData(0);
-      for (let i = 0; i < d.length; i++) d[i] = (Math.random() * 2 - 1) * (1 - i / d.length);
+      for (let i = 0; i < d.length; i++) d[i] = (Math.random()*2-1)*(1-i/d.length);
       const ns = ctx.createBufferSource(), ng = ctx.createGain();
-      ns.buffer = buf; ng.gain.setValueAtTime(0.5, t); ng.gain.exponentialRampToValueAtTime(0.001, t + 0.08);
+      ns.buffer = buf;
+      ng.gain.setValueAtTime(0.5, t); ng.gain.exponentialRampToValueAtTime(0.001, t+0.08);
       ns.connect(ng); ng.connect(ctx.destination); ns.start(t);
     } else {
-      // 3, 2, 1 — 각 숫자마다 점점 높아지는 두꺼운 틱 사운드
-      const baseFreq = [220, 330, 440][n - 1] ?? 440;  // 1→440, 2→330, 3→220
-      const highFreq = baseFreq * 2;
-
-      // 메인 펄스 (square)
+      const baseFreq = [220,330,440][n-1] ?? 440;
       const o1 = ctx.createOscillator(), g1 = ctx.createGain();
       o1.type = "square";
-      o1.frequency.setValueAtTime(highFreq, t);
-      o1.frequency.exponentialRampToValueAtTime(baseFreq, t + 0.22);
-      g1.gain.setValueAtTime(0.35, t);
-      g1.gain.exponentialRampToValueAtTime(0.001, t + 0.28);
-      o1.connect(g1); g1.connect(ctx.destination);
-      o1.start(t); o1.stop(t + 0.28);
-
-      // 서브 베이스 (sine, 한 옥타브 아래)
+      o1.frequency.setValueAtTime(baseFreq*2, t);
+      o1.frequency.exponentialRampToValueAtTime(baseFreq, t+0.22);
+      g1.gain.setValueAtTime(0.35, t); g1.gain.exponentialRampToValueAtTime(0.001, t+0.28);
+      o1.connect(g1); g1.connect(ctx.destination); o1.start(t); o1.stop(t+0.28);
       const o2 = ctx.createOscillator(), g2 = ctx.createGain();
-      o2.type = "sine";
-      o2.frequency.setValueAtTime(baseFreq * 0.5, t);
-      g2.gain.setValueAtTime(0.25, t);
-      g2.gain.exponentialRampToValueAtTime(0.001, t + 0.30);
-      o2.connect(g2); g2.connect(ctx.destination);
-      o2.start(t); o2.stop(t + 0.30);
-
-      // 짧은 노이즈 어택
-      const buf = ctx.createBuffer(1, ctx.sampleRate * 0.04, ctx.sampleRate);
+      o2.type = "sine"; o2.frequency.setValueAtTime(baseFreq*0.5, t);
+      g2.gain.setValueAtTime(0.25, t); g2.gain.exponentialRampToValueAtTime(0.001, t+0.30);
+      o2.connect(g2); g2.connect(ctx.destination); o2.start(t); o2.stop(t+0.30);
+      const buf = ctx.createBuffer(1, ctx.sampleRate*0.04, ctx.sampleRate);
       const d = buf.getChannelData(0);
-      for (let i = 0; i < d.length; i++) d[i] = (Math.random() * 2 - 1) * (1 - i / d.length);
+      for (let i = 0; i < d.length; i++) d[i] = (Math.random()*2-1)*(1-i/d.length);
       const ns = ctx.createBufferSource(), ng = ctx.createGain();
-      ns.buffer = buf; ng.gain.setValueAtTime(0.28, t); ng.gain.exponentialRampToValueAtTime(0.001, t + 0.04);
+      ns.buffer = buf;
+      ng.gain.setValueAtTime(0.28, t); ng.gain.exponentialRampToValueAtTime(0.001, t+0.04);
       ns.connect(ng); ng.connect(ctx.destination); ns.start(t);
     }
   } catch (_) { /* ignore */ }
 }
 
-// ── Goal fanfare ───────────────────────────────────────────────────────────────
-function playGoalFanfare(ctx: AudioContext) {
-  const t = ctx.currentTime;
-  const notes = [523, 659, 784, 1047];
-  notes.forEach((freq, i) => {
-    const osc = ctx.createOscillator(), g = ctx.createGain();
-    osc.connect(g); g.connect(ctx.destination);
-    osc.type = "square";
-    osc.frequency.setValueAtTime(freq, t + i * 0.12);
-    g.gain.setValueAtTime(0.22, t + i * 0.12);
-    g.gain.exponentialRampToValueAtTime(0.001, t + i * 0.12 + 0.25);
-    osc.start(t + i * 0.12); osc.stop(t + i * 0.12 + 0.25);
-  });
+// ── Goal fanfare ──────────────────────────────────────────────────────────────
+function playGoalFanfare() {
+  try {
+    const ctx = getAC();
+    const t = ctx.currentTime;
+    [523,659,784,1047].forEach((freq,i) => {
+      const o = ctx.createOscillator(), g = ctx.createGain();
+      o.type = "square"; o.frequency.setValueAtTime(freq, t+i*0.12);
+      g.gain.setValueAtTime(0.22, t+i*0.12); g.gain.exponentialRampToValueAtTime(0.001, t+i*0.12+0.25);
+      o.connect(g); g.connect(ctx.destination); o.start(t+i*0.12); o.stop(t+i*0.12+0.25);
+    });
+  } catch (_) { /* ignore */ }
 }
 
-// ── Chiptune BGM ──────────────────────────────────────────────────────────────
+// ── Chiptune BGM — uses same shared AudioContext ──────────────────────────────
 class ChiptuneBGM {
-  private ctx: AudioContext;
-  private masterGain: GainNode;
+  private masterGain: GainNode | null = null;
   private running = false;
   private noteIdx = 0;
   private beatTimer = 0;
   private rafId = 0;
   private lastTs = 0;
 
-  // 8-bit style melody (C major pentatonic)
   private melody = [
-    523, 659, 784, 659, 523, 659, 784, 1047,
-    880, 784, 659, 784, 523, 659, 523, 392,
-    523, 659, 784, 880, 784, 659, 523, 659,
-    392, 523, 659, 523, 392, 330, 392, 523,
+    523,659,784,659,523,659,784,1047,
+    880,784,659,784,523,659,523,392,
+    523,659,784,880,784,659,523,659,
+    392,523,659,523,392,330,392,523,
   ];
-  // Bass line
   private bass = [
-    130, 130, 164, 164, 130, 130, 164, 196,
-    164, 164, 130, 164, 130, 130, 130, 98,
-    130, 130, 164, 174, 164, 130, 130, 130,
-    98, 130, 130, 130, 98, 82, 98, 130,
+    130,130,164,164,130,130,164,196,
+    164,164,130,164,130,130,130,98,
+    130,130,164,174,164,130,130,130,
+    98,130,130,130,98,82,98,130,
   ];
 
-  constructor() {
-    this.ctx = new (window.AudioContext || (window as any).webkitAudioContext)();
-    this.masterGain = this.ctx.createGain();
-    this.masterGain.gain.setValueAtTime(0.07, this.ctx.currentTime);
-    this.masterGain.connect(this.ctx.destination);
+  private getMaster(): { ctx: AudioContext; master: GainNode } {
+    const ctx = getAC();
+    if (!this.masterGain) {
+      this.masterGain = ctx.createGain();
+      this.masterGain.gain.setValueAtTime(0.07, ctx.currentTime);
+      this.masterGain.connect(ctx.destination);
+    }
+    return { ctx, master: this.masterGain };
   }
 
   private playNote(freq: number, bassFreq: number) {
-    const t = this.ctx.currentTime;
-    const dur = 0.13;
-
-    // Melody — square wave
-    const osc = this.ctx.createOscillator(), g = this.ctx.createGain();
-    osc.type = "square"; osc.frequency.setValueAtTime(freq, t);
-    g.gain.setValueAtTime(0.5, t); g.gain.exponentialRampToValueAtTime(0.001, t + dur);
-    osc.connect(g); g.connect(this.masterGain);
-    osc.start(t); osc.stop(t + dur);
-
-    // Bass — triangle wave
-    const b = this.ctx.createOscillator(), bg = this.ctx.createGain();
-    b.type = "triangle"; b.frequency.setValueAtTime(bassFreq, t);
-    bg.gain.setValueAtTime(0.4, t); bg.gain.exponentialRampToValueAtTime(0.001, t + dur * 1.5);
-    b.connect(bg); bg.connect(this.masterGain);
-    b.start(t); b.stop(t + dur * 1.5);
+    try {
+      const { ctx, master } = this.getMaster();
+      const t = ctx.currentTime;
+      const dur = 0.13;
+      const osc = ctx.createOscillator(), g = ctx.createGain();
+      osc.type = "square"; osc.frequency.setValueAtTime(freq, t);
+      g.gain.setValueAtTime(0.5, t); g.gain.exponentialRampToValueAtTime(0.001, t+dur);
+      osc.connect(g); g.connect(master); osc.start(t); osc.stop(t+dur);
+      const b = ctx.createOscillator(), bg = ctx.createGain();
+      b.type = "triangle"; b.frequency.setValueAtTime(bassFreq, t);
+      bg.gain.setValueAtTime(0.4, t); bg.gain.exponentialRampToValueAtTime(0.001, t+dur*1.5);
+      b.connect(bg); bg.connect(master); b.start(t); b.stop(t+dur*1.5);
+    } catch (_) { /* ignore */ }
   }
 
   start() {
     if (this.running) return;
     this.running = true;
-    if (this.ctx.state === "suspended") this.ctx.resume();
     this.lastTs = 0;
-    const BPM = 160;
-    const beatLen = 60 / BPM;
+    const BPM = 160, beatLen = 60/BPM;
     const tick = (ts: number) => {
       if (!this.running) return;
       if (this.lastTs === 0) { this.lastTs = ts; this.rafId = requestAnimationFrame(tick); return; }
-      const dt = Math.min((ts - this.lastTs) / 1000, 0.05);
+      const dt = Math.min((ts-this.lastTs)/1000, 0.05);
       this.lastTs = ts;
       this.beatTimer += dt;
       if (this.beatTimer >= beatLen) {
@@ -198,24 +171,19 @@ class ChiptuneBGM {
   stop() {
     this.running = false;
     cancelAnimationFrame(this.rafId);
-    this.masterGain.gain.setTargetAtTime(0, this.ctx.currentTime, 0.3);
+    try {
+      const { ctx, master } = this.getMaster();
+      master.gain.setTargetAtTime(0, ctx.currentTime, 0.3);
+      this.masterGain = null;
+    } catch (_) { /* ignore */ }
   }
 
-  setTempo(bpm: number) {
-    // Not used dynamically here, but available
-  }
-
-  close() {
-    this.stop();
-    setTimeout(() => this.ctx.close(), 600);
-  }
-
-  getCtx() { return this.ctx; }
+  close() { this.stop(); }
 }
 
 const MAX_TIME_BUFFER = 15;
 const MAX_GAME_TIME = 50;
-const GOAL_WARN_SECS = 7; // seconds before end to show 골인 overlay
+const GOAL_WARN_SECS = 7;
 
 const GamePage = () => {
   const { game_type } = useParams();
@@ -230,17 +198,12 @@ const GamePage = () => {
   const [autoStart, setAutoStart] = useState(5);
   const [showGoal, setShowGoal] = useState(false);
   const [audioUnlocked, setAudioUnlocked] = useState(false);
+
   const waitTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const autoStartRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const gameStartRef = useRef<number>(0);
   const bgmRef = useRef<ChiptuneBGM | null>(null);
   const goalPlayedRef = useRef(false);
-
-  const unlockAndStartIntroBGM = useCallback(() => {
-    if (!bgmRef.current) bgmRef.current = new ChiptuneBGM();
-    bgmRef.current.start();
-    setAudioUnlocked(true);
-  }, []);
 
   const goToResult = useCallback((finalScore: number) => {
     bgmRef.current?.close(); bgmRef.current = null;
@@ -253,13 +216,19 @@ const GamePage = () => {
     setCountdown(3);
   };
 
-  // Intro click/tap/space → jump sound + unlock audio
+  // 첫 인트로 상호작용: AudioContext 잠금 해제 + BGM 시작 + 점프 사운드
   const handleIntroInteraction = useCallback(() => {
+    // 오디오 컨텍스트 활성화
+    getAC();
+    // 점프 사운드
     playIntroJump();
-    unlockAndStartIntroBGM();
-  }, [unlockAndStartIntroBGM]);
+    // BGM 시작 (중복 방지)
+    if (!bgmRef.current) bgmRef.current = new ChiptuneBGM();
+    bgmRef.current.start();
+    setAudioUnlocked(true);
+  }, []);
 
-  // Auto-start countdown on instructions screen
+  // Auto-start
   useEffect(() => {
     if (phase !== "instructions") return;
     setAutoStart(5);
@@ -278,7 +247,7 @@ const GamePage = () => {
     return () => { if (autoStartRef.current) clearInterval(autoStartRef.current); };
   }, [phase]);
 
-  // Space/tap → intro jump sound (only during instructions)
+  // Space/ArrowUp → intro interaction
   useEffect(() => {
     if (phase !== "instructions") return;
     const onKey = (e: KeyboardEvent) => {
@@ -288,7 +257,7 @@ const GamePage = () => {
     return () => window.removeEventListener("keydown", onKey);
   }, [phase, handleIntroInteraction]);
 
-  // Countdown beeps + BGM (already started in intro, just ensure it's running)
+  // Countdown beeps
   useEffect(() => {
     if (phase !== "countdown") return;
     playCountdownBeep(countdown);
@@ -297,7 +266,7 @@ const GamePage = () => {
       setShowGoal(false);
       goalPlayedRef.current = false;
       gameStartRef.current = Date.now();
-      // BGM may already be running from intro; ensure it's started
+      // BGM 이미 시작됐으면 유지, 아니면 시작
       if (!bgmRef.current) bgmRef.current = new ChiptuneBGM();
       bgmRef.current.start();
       return;
@@ -306,16 +275,14 @@ const GamePage = () => {
     return () => clearTimeout(t);
   }, [phase, countdown]);
 
-  // 골인 warning + fanfare
+  // 골인 warning
   useEffect(() => {
     if (phase !== "playing") return;
     const remainingSecs = MAX_GAME_TIME - gameTime / 1000;
     if (remainingSecs <= GOAL_WARN_SECS && !goalPlayedRef.current) {
       goalPlayedRef.current = true;
       setShowGoal(true);
-      try {
-        if (bgmRef.current) playGoalFanfare(bgmRef.current.getCtx());
-      } catch (_) { /* ignore */ }
+      playGoalFanfare();
     }
   }, [phase, gameTime]);
 
@@ -398,7 +365,7 @@ const GamePage = () => {
 
           <div className="flex flex-col items-center gap-2">
             <button
-              onClick={e => { e.stopPropagation(); startGame(); }}
+              onClick={e => { e.stopPropagation(); handleIntroInteraction(); startGame(); }}
               className="font-pixel px-12 py-4 bg-neon-green text-background rounded hover:brightness-125 transition-all relative overflow-hidden"
               style={{ fontSize: "clamp(0.7rem, 1.5vw, 1rem)", boxShadow: "0 0 24px hsl(var(--neon-green) / 0.5)" }}
             >
@@ -437,7 +404,6 @@ const GamePage = () => {
             <div className="font-pixel text-neon-yellow" style={{ fontSize: "clamp(0.6rem, 1.2vw, 0.85rem)" }}>
               SCORE: <span className="text-neon-green">{score}</span>
             </div>
-            {/* Countdown timer — turns red in last 7s */}
             <div
               className="font-pixel"
               style={{
@@ -467,29 +433,14 @@ const GamePage = () => {
             </div>
           </div>
 
-          {/* 골인! overlay (last 7s) */}
+          {/* 골인! overlay */}
           {showGoal && phase === "playing" && (
             <div className="absolute inset-0 pointer-events-none z-30 flex items-center justify-center">
-              <div
-                className="font-pixel text-center"
-                style={{ animation: "pulse 0.6s ease-in-out infinite" }}
-              >
-                <p
-                  style={{
-                    fontSize: "clamp(2rem, 6vw, 4rem)",
-                    color: "#ffcc00",
-                    textShadow: "0 0 40px #ffcc00, 0 0 80px #ff8800",
-                  }}
-                >
+              <div className="font-pixel text-center" style={{ animation: "pulse 0.6s ease-in-out infinite" }}>
+                <p style={{ fontSize: "clamp(2rem, 6vw, 4rem)", color: "#ffcc00", textShadow: "0 0 40px #ffcc00, 0 0 80px #ff8800" }}>
                   🏁 골인!
                 </p>
-                <p
-                  style={{
-                    fontSize: "clamp(0.6rem, 1.2vw, 0.9rem)",
-                    color: "#ff8800",
-                    marginTop: "0.5rem",
-                  }}
-                >
+                <p style={{ fontSize: "clamp(0.6rem, 1.2vw, 0.9rem)", color: "#ff8800", marginTop: "0.5rem" }}>
                   {remainingSecs}초 남았다!
                 </p>
               </div>
