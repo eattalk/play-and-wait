@@ -442,71 +442,83 @@ const GamePage = () => {
 
       {/* ── Countdown ── */}
       {phase === "countdown" && (
-        <div className="relative z-10 flex flex-col items-center justify-center flex-1 gap-6">
-          {/* 배경 링 */}
-          <div
-            className="absolute rounded-full border-2 border-neon-green/20"
-            style={{
-              width: "clamp(180px, 30vw, 340px)",
-              height: "clamp(180px, 30vw, 340px)",
-              animation: "pulse 1s ease-in-out infinite",
-            }}
-          />
-          <div
-            className="absolute rounded-full border border-neon-green/10"
-            style={{
-              width: "clamp(240px, 40vw, 460px)",
-              height: "clamp(240px, 40vw, 460px)",
-              animation: "pulse 1.4s ease-in-out infinite",
-            }}
-          />
+        <div className="relative z-10 flex flex-col items-center justify-center flex-1 overflow-hidden">
 
-          {/* GET READY 텍스트 */}
-          <p
-            className="font-pixel tracking-[0.3em] relative z-10"
+          {/* 배경 그라디언트 */}
+          <div className="absolute inset-0 bg-gradient-radial from-neon-green/5 via-transparent to-transparent" />
+
+          {/* 퍼지는 링 */}
+          {[1, 2, 3].map(i => (
+            <div
+              key={i}
+              className="absolute rounded-full border border-neon-green/20 pointer-events-none"
+              style={{
+                width: `${i * 28}vw`, height: `${i * 28}vw`,
+                maxWidth: `${i * 320}px`, maxHeight: `${i * 320}px`,
+                opacity: 1 - i * 0.25,
+                animation: `pulse ${0.9 + i * 0.3}s ease-in-out infinite`,
+              }}
+            />
+          ))}
+
+          {/* GET READY */}
+          <p className="font-pixel relative z-10 tracking-[0.4em] mb-6"
             style={{
-              fontSize: "clamp(0.55rem, 1.1vw, 0.8rem)",
+              fontSize: "clamp(0.5rem, 1vw, 0.75rem)",
               color: "hsl(var(--muted-foreground))",
-              letterSpacing: "0.4em",
             }}
           >
-            GET READY
+            GET  READY
           </p>
 
-          {/* 숫자 / GO! */}
+          {/* 숫자 */}
           <div
-            className="relative z-10 font-pixel flex items-center justify-center"
             key={countdown}
+            className="relative z-10 font-pixel"
             style={{
-              fontSize: countdown === 0 ? "clamp(3.5rem, 9vw, 7rem)" : "clamp(5rem, 13vw, 9rem)",
+              fontSize: countdown === 0 ? "clamp(4rem, 12vw, 8rem)" : "clamp(6rem, 16vw, 11rem)",
+              lineHeight: 1,
               color: countdown === 0 ? "hsl(var(--neon-yellow))" : "hsl(var(--neon-green))",
               textShadow: countdown === 0
-                ? "0 0 40px hsl(var(--neon-yellow)), 0 0 80px hsl(var(--neon-yellow) / 0.4)"
-                : "0 0 40px hsl(var(--neon-green)), 0 0 80px hsl(var(--neon-green) / 0.4)",
-              animation: "pulse 0.5s ease-out",
-              lineHeight: 1,
+                ? "0 0 30px hsl(var(--neon-yellow)), 0 0 80px hsl(var(--neon-yellow)/0.5), 0 0 120px hsl(var(--neon-yellow)/0.2)"
+                : "0 0 30px hsl(var(--neon-green)), 0 0 80px hsl(var(--neon-green)/0.5), 0 0 140px hsl(var(--neon-green)/0.2)",
+              animation: "scale-in 0.25s ease-out",
             }}
           >
             {countdown === 0 ? "GO!" : countdown}
           </div>
 
-          {/* 하단 점 인디케이터 */}
-          <div className="flex gap-3 relative z-10 mt-2">
-            {[3, 2, 1].map(n => (
-              <div
-                key={n}
-                className="rounded-full transition-all duration-300"
-                style={{
-                  width: "10px", height: "10px",
-                  background: countdown <= n && countdown > 0
-                    ? "hsl(var(--neon-green))"
-                    : "hsl(var(--muted-foreground) / 0.3)",
-                  boxShadow: countdown <= n && countdown > 0
-                    ? "0 0 8px hsl(var(--neon-green))"
-                    : "none",
-                }}
-              />
-            ))}
+          {/* 하단 스텝 바 */}
+          <div className="flex items-center gap-3 mt-8 relative z-10">
+            {[3, 2, 1, 0].map((n, idx) => {
+              const active = countdown <= n ? (n === 0 ? countdown === 0 : true) : false;
+              const isGo = n === 0;
+              return (
+                <div key={n} className="flex flex-col items-center gap-1">
+                  <div
+                    className="rounded-sm transition-all duration-200"
+                    style={{
+                      width: isGo ? "36px" : "20px",
+                      height: "6px",
+                      background: countdown === n
+                        ? (isGo ? "hsl(var(--neon-yellow))" : "hsl(var(--neon-green))")
+                        : countdown < n
+                          ? "hsl(var(--neon-green)/0.5)"
+                          : "hsl(var(--muted-foreground)/0.2)",
+                      boxShadow: countdown === n
+                        ? `0 0 10px ${isGo ? "hsl(var(--neon-yellow))" : "hsl(var(--neon-green))"}`
+                        : "none",
+                    }}
+                  />
+                  <span className="font-pixel" style={{
+                    fontSize: "0.4rem",
+                    color: countdown <= n ? "hsl(var(--neon-green))" : "hsl(var(--muted-foreground)/0.3)",
+                  }}>
+                    {isGo ? "GO" : n}
+                  </span>
+                </div>
+              );
+            })}
           </div>
         </div>
       )}
@@ -558,15 +570,82 @@ const GamePage = () => {
             </div>
           </div>
 
-          {/* 골인! overlay */}
+          {/* ── 마지막 10초 전체화면 카운트다운 오버레이 ── */}
+          {phase === "playing" && remainingSecs > 0 && remainingSecs <= 10 && (
+            <div
+              className="absolute inset-0 pointer-events-none z-30"
+              style={{ background: `rgba(0,0,0,${0.1 + (10 - remainingSecs) * 0.04})` }}
+            >
+              {/* 테두리 펄스 */}
+              <div
+                className="absolute inset-0 border-2"
+                style={{
+                  borderColor: remainingSecs <= 5 ? "#ff4444" : "#ff8800",
+                  boxShadow: remainingSecs <= 5
+                    ? "inset 0 0 60px rgba(255,68,68,0.25)"
+                    : "inset 0 0 40px rgba(255,136,0,0.15)",
+                  animation: `pulse ${remainingSecs <= 5 ? "0.4s" : "0.7s"} ease-in-out infinite`,
+                }}
+              />
+
+              {/* 상단 "FINAL COUNTDOWN" 레이블 */}
+              <div className="absolute top-4 left-0 right-0 flex justify-center">
+                <span
+                  className="font-pixel tracking-[0.3em]"
+                  style={{
+                    fontSize: "clamp(0.45rem, 0.9vw, 0.65rem)",
+                    color: remainingSecs <= 5 ? "#ff4444" : "#ff8800",
+                    textShadow: remainingSecs <= 5
+                      ? "0 0 12px #ff4444"
+                      : "0 0 12px #ff8800",
+                    animation: "pulse 0.6s ease-in-out infinite",
+                  }}
+                >
+                  FINAL  COUNTDOWN
+                </span>
+              </div>
+
+              {/* 거대 숫자 */}
+              <div className="absolute inset-0 flex items-center justify-center">
+                <div
+                  key={remainingSecs}
+                  className="font-pixel"
+                  style={{
+                    fontSize: "clamp(6rem, 18vw, 13rem)",
+                    lineHeight: 1,
+                    color: remainingSecs <= 5 ? "#ff4444" : "#ff8800",
+                    textShadow: remainingSecs <= 5
+                      ? "0 0 40px #ff4444, 0 0 100px rgba(255,68,68,0.4)"
+                      : "0 0 40px #ff8800, 0 0 100px rgba(255,136,0,0.3)",
+                    opacity: 0.18,
+                    animation: "scale-in 0.2s ease-out",
+                    userSelect: "none",
+                  }}
+                >
+                  {remainingSecs}
+                </div>
+              </div>
+
+              {/* 하단 진행바 */}
+              <div className="absolute bottom-0 left-0 right-0 h-1" style={{ background: "rgba(255,255,255,0.06)" }}>
+                <div
+                  className="h-full transition-all duration-1000"
+                  style={{
+                    width: `${(remainingSecs / 10) * 100}%`,
+                    background: remainingSecs <= 5 ? "#ff4444" : "#ff8800",
+                    boxShadow: remainingSecs <= 5 ? "0 0 8px #ff4444" : "0 0 8px #ff8800",
+                  }}
+                />
+              </div>
+            </div>
+          )}
+
+          {/* 골인! overlay (시간 = 0) */}
           {showGoal && phase === "playing" && (
             <div className="absolute inset-0 pointer-events-none z-30 flex items-center justify-center">
               <div className="font-pixel text-center" style={{ animation: "pulse 0.6s ease-in-out infinite" }}>
                 <p style={{ fontSize: "clamp(2rem, 6vw, 4rem)", color: "#ffcc00", textShadow: "0 0 40px #ffcc00, 0 0 80px #ff8800" }}>
                   🏁 골인!
-                </p>
-                <p style={{ fontSize: "clamp(0.6rem, 1.2vw, 0.9rem)", color: "#ff8800", marginTop: "0.5rem" }}>
-                  {remainingSecs}초 남았다!
                 </p>
               </div>
             </div>
