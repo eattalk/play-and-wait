@@ -458,26 +458,27 @@ const GamePage = () => {
         <div className="relative z-10 flex flex-col flex-1 overflow-hidden">
 
           {/* HUD bar */}
-          <div className="flex items-center justify-between px-6 py-2 shrink-0 relative">
+          <div className="flex items-center justify-between px-6 py-2 shrink-0">
+            {/* 타이머 — 왼쪽 위 크게 */}
+            <div
+              className="font-pixel"
+              style={{
+                fontSize: "clamp(1rem, 2vw, 1.4rem)",
+                color: remainingSecs <= 10 ? "#ff4444" : "hsl(var(--neon-green))",
+                textShadow: remainingSecs <= 10
+                  ? "0 0 20px #ff4444"
+                  : "0 0 14px hsl(var(--neon-green))",
+                transition: "color 0.3s, text-shadow 0.3s",
+                minWidth: "7ch",
+              }}
+            >
+              ⏱ {formatTime(gameTime)}
+            </div>
             <div className="font-pixel text-neon-yellow" style={{ fontSize: "clamp(0.6rem, 1.2vw, 0.85rem)" }}>
               SCORE: <span className="text-neon-green">{score}</span>
             </div>
             <div className="font-pixel text-muted-foreground" style={{ fontSize: "clamp(0.6rem, 1.2vw, 0.85rem)" }}>
               TABLE: <span className="text-neon-cyan">{table_name}</span>
-            </div>
-            {/* 타이머 — 오른쪽 위 고정 */}
-            <div
-              className="font-pixel"
-              style={{
-                fontSize: "clamp(0.75rem, 1.5vw, 1.1rem)",
-                color: remainingSecs <= 10 ? "#ff4444" : "hsl(var(--muted-foreground))",
-                textShadow: remainingSecs <= 10 ? "0 0 16px #ff4444" : "none",
-                transition: "color 0.3s, text-shadow 0.3s",
-                minWidth: "5ch",
-                textAlign: "right",
-              }}
-            >
-              ⏱ {formatTime(gameTime)}
             </div>
           </div>
 
