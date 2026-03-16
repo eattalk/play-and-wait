@@ -381,7 +381,7 @@ const GamePage = () => {
             className="w-full border-2 border-neon-green/30 rounded overflow-hidden"
             style={{ maxWidth: "960px", boxShadow: "0 0 28px hsl(var(--neon-green) / 0.12)" }}
           >
-            <GameDemoCanvas />
+            <GameDemoCanvas unlocked={audioUnlocked} />
           </div>
 
           <div className="flex items-center gap-6">
