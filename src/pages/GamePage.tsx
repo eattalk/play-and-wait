@@ -256,8 +256,8 @@ const GamePage = () => {
 
   // Intro jump sound on click/tap/space
   const handleIntroInteraction = useCallback(() => {
-    try { playIntroJump(getAudioCtx()); } catch (_) { /* ignore */ }
-  }, [getAudioCtx]);
+    playIntroJump();
+  }, []);
 
   // Auto-start countdown on instructions screen
   useEffect(() => {
