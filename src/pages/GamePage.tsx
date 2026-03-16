@@ -3,102 +3,98 @@ import { useEffect, useRef, useState, useCallback } from "react";
 import DinoGame from "@/components/DinoGame";
 import GameDemoCanvas from "@/components/GameDemoCanvas";
 
-// ── Single shared AudioContext — created on first user interaction ─────────────
+// ─── Shared AudioContext — 반드시 resume() await 후 사용 ──────────────────────
 let _ac: AudioContext | null = null;
-function getAC(): AudioContext {
+
+async function initAC(): Promise<AudioContext> {
   if (!_ac || _ac.state === "closed")
     _ac = new (window.AudioContext || (window as any).webkitAudioContext)();
-  if (_ac.state === "suspended") _ac.resume();
+  if (_ac.state === "suspended") await _ac.resume();
   return _ac;
 }
 
-// ── Intro jump sound ──────────────────────────────────────────────────────────
+// running 상태일 때만 반환 (비동기 없이 즉시 사용 가능한 ctx)
+function getAC(): AudioContext | null {
+  return _ac && _ac.state === "running" ? _ac : null;
+}
+
+// ─── 인트로 점프 사운드 ───────────────────────────────────────────────────────
 function playIntroJump() {
-  try {
-    const ctx = getAC();
-    const t = ctx.currentTime;
+  const ctx = getAC();
+  if (!ctx) return;
+  const t = ctx.currentTime;
+  const o1 = ctx.createOscillator(), g1 = ctx.createGain();
+  o1.type = "square";
+  o1.frequency.setValueAtTime(500, t);
+  o1.frequency.exponentialRampToValueAtTime(220, t + 0.18);
+  g1.gain.setValueAtTime(0.22, t); g1.gain.exponentialRampToValueAtTime(0.001, t + 0.18);
+  o1.connect(g1); g1.connect(ctx.destination); o1.start(t); o1.stop(t + 0.18);
+  const o2 = ctx.createOscillator(), g2 = ctx.createGain();
+  o2.type = "sine";
+  o2.frequency.setValueAtTime(900, t);
+  o2.frequency.exponentialRampToValueAtTime(400, t + 0.14);
+  g2.gain.setValueAtTime(0.10, t); g2.gain.exponentialRampToValueAtTime(0.001, t + 0.14);
+  o2.connect(g2); g2.connect(ctx.destination); o2.start(t); o2.stop(t + 0.14);
+}
+
+// ─── 3-2-1 카운트다운 ─────────────────────────────────────────────────────────
+function playCountdownBeep(n: number) {
+  const ctx = getAC();
+  if (!ctx) return;
+  const t = ctx.currentTime;
+  if (n === 0) {
+    const chords = [[523,659,784],[659,784,988],[784,988,1175],[1047,1319,1568]] as number[][];
+    chords.forEach(([f1,f2,f3], i) => {
+      [f1,f2,f3].forEach(freq => {
+        const o = ctx.createOscillator(), g = ctx.createGain();
+        o.type = i < 2 ? "square" : "sawtooth";
+        o.frequency.setValueAtTime(freq, t + i * 0.08);
+        g.gain.setValueAtTime(0.18, t + i * 0.08); g.gain.exponentialRampToValueAtTime(0.001, t + i * 0.08 + 0.22);
+        o.connect(g); g.connect(ctx.destination); o.start(t + i * 0.08); o.stop(t + i * 0.08 + 0.22);
+      });
+    });
+    const buf = ctx.createBuffer(1, ctx.sampleRate * 0.08, ctx.sampleRate);
+    const d = buf.getChannelData(0);
+    for (let i = 0; i < d.length; i++) d[i] = (Math.random()*2-1)*(1-i/d.length);
+    const ns = ctx.createBufferSource(), ng = ctx.createGain();
+    ns.buffer = buf;
+    ng.gain.setValueAtTime(0.5, t); ng.gain.exponentialRampToValueAtTime(0.001, t + 0.08);
+    ns.connect(ng); ng.connect(ctx.destination); ns.start(t);
+  } else {
+    const baseFreq = [220,330,440][n-1] ?? 440;
     const o1 = ctx.createOscillator(), g1 = ctx.createGain();
     o1.type = "square";
-    o1.frequency.setValueAtTime(500, t);
-    o1.frequency.exponentialRampToValueAtTime(220, t + 0.18);
-    g1.gain.setValueAtTime(0.22, t);
-    g1.gain.exponentialRampToValueAtTime(0.001, t + 0.18);
-    o1.connect(g1); g1.connect(ctx.destination);
-    o1.start(t); o1.stop(t + 0.18);
+    o1.frequency.setValueAtTime(baseFreq*2, t); o1.frequency.exponentialRampToValueAtTime(baseFreq, t+0.22);
+    g1.gain.setValueAtTime(0.35, t); g1.gain.exponentialRampToValueAtTime(0.001, t+0.28);
+    o1.connect(g1); g1.connect(ctx.destination); o1.start(t); o1.stop(t+0.28);
     const o2 = ctx.createOscillator(), g2 = ctx.createGain();
-    o2.type = "sine";
-    o2.frequency.setValueAtTime(900, t);
-    o2.frequency.exponentialRampToValueAtTime(400, t + 0.14);
-    g2.gain.setValueAtTime(0.10, t);
-    g2.gain.exponentialRampToValueAtTime(0.001, t + 0.14);
-    o2.connect(g2); g2.connect(ctx.destination);
-    o2.start(t); o2.stop(t + 0.14);
-  } catch (_) { /* ignore */ }
+    o2.type = "sine"; o2.frequency.setValueAtTime(baseFreq*0.5, t);
+    g2.gain.setValueAtTime(0.25, t); g2.gain.exponentialRampToValueAtTime(0.001, t+0.30);
+    o2.connect(g2); g2.connect(ctx.destination); o2.start(t); o2.stop(t+0.30);
+    const buf = ctx.createBuffer(1, ctx.sampleRate*0.04, ctx.sampleRate);
+    const d = buf.getChannelData(0);
+    for (let i = 0; i < d.length; i++) d[i] = (Math.random()*2-1)*(1-i/d.length);
+    const ns = ctx.createBufferSource(), ng = ctx.createGain();
+    ns.buffer = buf;
+    ng.gain.setValueAtTime(0.28, t); ng.gain.exponentialRampToValueAtTime(0.001, t+0.04);
+    ns.connect(ng); ng.connect(ctx.destination); ns.start(t);
+  }
 }
 
-// ── 3-2-1 야무진 카운트다운 ───────────────────────────────────────────────────
-function playCountdownBeep(n: number) {
-  try {
-    const ctx = getAC();
-    const t = ctx.currentTime;
-    if (n === 0) {
-      const chords = [[523,659,784],[659,784,988],[784,988,1175],[1047,1319,1568]] as number[][];
-      chords.forEach(([f1,f2,f3], i) => {
-        [f1,f2,f3].forEach(freq => {
-          const o = ctx.createOscillator(), g = ctx.createGain();
-          o.type = i < 2 ? "square" : "sawtooth";
-          o.frequency.setValueAtTime(freq, t + i * 0.08);
-          g.gain.setValueAtTime(0.18, t + i * 0.08);
-          g.gain.exponentialRampToValueAtTime(0.001, t + i * 0.08 + 0.22);
-          o.connect(g); g.connect(ctx.destination);
-          o.start(t + i * 0.08); o.stop(t + i * 0.08 + 0.22);
-        });
-      });
-      const buf = ctx.createBuffer(1, ctx.sampleRate * 0.08, ctx.sampleRate);
-      const d = buf.getChannelData(0);
-      for (let i = 0; i < d.length; i++) d[i] = (Math.random()*2-1)*(1-i/d.length);
-      const ns = ctx.createBufferSource(), ng = ctx.createGain();
-      ns.buffer = buf;
-      ng.gain.setValueAtTime(0.5, t); ng.gain.exponentialRampToValueAtTime(0.001, t+0.08);
-      ns.connect(ng); ng.connect(ctx.destination); ns.start(t);
-    } else {
-      const baseFreq = [220,330,440][n-1] ?? 440;
-      const o1 = ctx.createOscillator(), g1 = ctx.createGain();
-      o1.type = "square";
-      o1.frequency.setValueAtTime(baseFreq*2, t);
-      o1.frequency.exponentialRampToValueAtTime(baseFreq, t+0.22);
-      g1.gain.setValueAtTime(0.35, t); g1.gain.exponentialRampToValueAtTime(0.001, t+0.28);
-      o1.connect(g1); g1.connect(ctx.destination); o1.start(t); o1.stop(t+0.28);
-      const o2 = ctx.createOscillator(), g2 = ctx.createGain();
-      o2.type = "sine"; o2.frequency.setValueAtTime(baseFreq*0.5, t);
-      g2.gain.setValueAtTime(0.25, t); g2.gain.exponentialRampToValueAtTime(0.001, t+0.30);
-      o2.connect(g2); g2.connect(ctx.destination); o2.start(t); o2.stop(t+0.30);
-      const buf = ctx.createBuffer(1, ctx.sampleRate*0.04, ctx.sampleRate);
-      const d = buf.getChannelData(0);
-      for (let i = 0; i < d.length; i++) d[i] = (Math.random()*2-1)*(1-i/d.length);
-      const ns = ctx.createBufferSource(), ng = ctx.createGain();
-      ns.buffer = buf;
-      ng.gain.setValueAtTime(0.28, t); ng.gain.exponentialRampToValueAtTime(0.001, t+0.04);
-      ns.connect(ng); ng.connect(ctx.destination); ns.start(t);
-    }
-  } catch (_) { /* ignore */ }
-}
-
-// ── Goal fanfare ──────────────────────────────────────────────────────────────
+// ─── 골인 팡파레 ──────────────────────────────────────────────────────────────
 function playGoalFanfare() {
-  try {
-    const ctx = getAC();
-    const t = ctx.currentTime;
-    [523,659,784,1047].forEach((freq,i) => {
-      const o = ctx.createOscillator(), g = ctx.createGain();
-      o.type = "square"; o.frequency.setValueAtTime(freq, t+i*0.12);
-      g.gain.setValueAtTime(0.22, t+i*0.12); g.gain.exponentialRampToValueAtTime(0.001, t+i*0.12+0.25);
-      o.connect(g); g.connect(ctx.destination); o.start(t+i*0.12); o.stop(t+i*0.12+0.25);
-    });
-  } catch (_) { /* ignore */ }
+  const ctx = getAC();
+  if (!ctx) return;
+  const t = ctx.currentTime;
+  [523,659,784,1047].forEach((freq,i) => {
+    const o = ctx.createOscillator(), g = ctx.createGain();
+    o.type = "square"; o.frequency.setValueAtTime(freq, t+i*0.12);
+    g.gain.setValueAtTime(0.22, t+i*0.12); g.gain.exponentialRampToValueAtTime(0.001, t+i*0.12+0.25);
+    o.connect(g); g.connect(ctx.destination); o.start(t+i*0.12); o.stop(t+i*0.12+0.25);
+  });
 }
 
-// ── Chiptune BGM — uses same shared AudioContext ──────────────────────────────
+// ─── Chiptune BGM ─────────────────────────────────────────────────────────────
 class ChiptuneBGM {
   private masterGain: GainNode | null = null;
   private running = false;
@@ -120,8 +116,9 @@ class ChiptuneBGM {
     98,130,130,130,98,82,98,130,
   ];
 
-  private getMaster(): { ctx: AudioContext; master: GainNode } {
+  private getMaster(): { ctx: AudioContext; master: GainNode } | null {
     const ctx = getAC();
+    if (!ctx) return null;
     if (!this.masterGain) {
       this.masterGain = ctx.createGain();
       this.masterGain.gain.setValueAtTime(0.07, ctx.currentTime);
@@ -131,19 +128,19 @@ class ChiptuneBGM {
   }
 
   private playNote(freq: number, bassFreq: number) {
-    try {
-      const { ctx, master } = this.getMaster();
-      const t = ctx.currentTime;
-      const dur = 0.13;
-      const osc = ctx.createOscillator(), g = ctx.createGain();
-      osc.type = "square"; osc.frequency.setValueAtTime(freq, t);
-      g.gain.setValueAtTime(0.5, t); g.gain.exponentialRampToValueAtTime(0.001, t+dur);
-      osc.connect(g); g.connect(master); osc.start(t); osc.stop(t+dur);
-      const b = ctx.createOscillator(), bg = ctx.createGain();
-      b.type = "triangle"; b.frequency.setValueAtTime(bassFreq, t);
-      bg.gain.setValueAtTime(0.4, t); bg.gain.exponentialRampToValueAtTime(0.001, t+dur*1.5);
-      b.connect(bg); bg.connect(master); b.start(t); b.stop(t+dur*1.5);
-    } catch (_) { /* ignore */ }
+    const res = this.getMaster();
+    if (!res) return;
+    const { ctx, master } = res;
+    const t = ctx.currentTime;
+    const dur = 0.13;
+    const osc = ctx.createOscillator(), g = ctx.createGain();
+    osc.type = "square"; osc.frequency.setValueAtTime(freq, t);
+    g.gain.setValueAtTime(0.5, t); g.gain.exponentialRampToValueAtTime(0.001, t+dur);
+    osc.connect(g); g.connect(master); osc.start(t); osc.stop(t+dur);
+    const b = ctx.createOscillator(), bg = ctx.createGain();
+    b.type = "triangle"; b.frequency.setValueAtTime(bassFreq, t);
+    bg.gain.setValueAtTime(0.4, t); bg.gain.exponentialRampToValueAtTime(0.001, t+dur*1.5);
+    b.connect(bg); bg.connect(master); b.start(t); b.stop(t+dur*1.5);
   }
 
   start() {
@@ -172,8 +169,8 @@ class ChiptuneBGM {
     this.running = false;
     cancelAnimationFrame(this.rafId);
     try {
-      const { ctx, master } = this.getMaster();
-      master.gain.setTargetAtTime(0, ctx.currentTime, 0.3);
+      const res = this.getMaster();
+      if (res) res.master.gain.setTargetAtTime(0, res.ctx.currentTime, 0.3);
       this.masterGain = null;
     } catch (_) { /* ignore */ }
   }
@@ -216,16 +213,15 @@ const GamePage = () => {
     setCountdown(3);
   };
 
-  // 첫 인트로 상호작용: AudioContext 잠금 해제 + BGM 시작 + 점프 사운드
-  const handleIntroInteraction = useCallback(() => {
-    // 오디오 컨텍스트 활성화
-    getAC();
-    // 점프 사운드
-    playIntroJump();
-    // BGM 시작 (중복 방지)
-    if (!bgmRef.current) bgmRef.current = new ChiptuneBGM();
-    bgmRef.current.start();
-    setAudioUnlocked(true);
+  // ── 첫 클릭: AudioContext resume() await 후 점프음 + BGM 시작 ───────────────
+  const handleIntroInteraction = useCallback(async () => {
+    try {
+      await initAC(); // AudioContext가 running 상태가 될 때까지 기다림
+      playIntroJump();
+      if (!bgmRef.current) bgmRef.current = new ChiptuneBGM();
+      bgmRef.current.start();
+      setAudioUnlocked(true);
+    } catch (_) { /* ignore */ }
   }, []);
 
   // Auto-start
@@ -257,7 +253,7 @@ const GamePage = () => {
     return () => window.removeEventListener("keydown", onKey);
   }, [phase, handleIntroInteraction]);
 
-  // Countdown beeps
+  // 카운트다운 사운드
   useEffect(() => {
     if (phase !== "countdown") return;
     playCountdownBeep(countdown);
@@ -266,7 +262,6 @@ const GamePage = () => {
       setShowGoal(false);
       goalPlayedRef.current = false;
       gameStartRef.current = Date.now();
-      // BGM 이미 시작됐으면 유지, 아니면 시작
       if (!bgmRef.current) bgmRef.current = new ChiptuneBGM();
       bgmRef.current.start();
       return;
@@ -365,7 +360,7 @@ const GamePage = () => {
 
           <div className="flex flex-col items-center gap-2">
             <button
-              onClick={e => { e.stopPropagation(); handleIntroInteraction(); startGame(); }}
+              onClick={e => { e.stopPropagation(); handleIntroInteraction().then(() => startGame()); }}
               className="font-pixel px-12 py-4 bg-neon-green text-background rounded hover:brightness-125 transition-all relative overflow-hidden"
               style={{ fontSize: "clamp(0.7rem, 1.5vw, 1rem)", boxShadow: "0 0 24px hsl(var(--neon-green) / 0.5)" }}
             >
