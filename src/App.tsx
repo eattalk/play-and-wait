@@ -2,7 +2,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
-import Index from "./pages/Index";
+import { Navigate } from "react-router-dom";
 import GamePage from "./pages/GamePage";
 import GameResult from "./pages/GameResult";
 import NotFound from "./pages/NotFound";
@@ -15,7 +15,7 @@ const App = () => (
       <Toaster />
       <BrowserRouter>
         <Routes>
-          <Route path="/" element={<Index />} />
+          <Route path="/" element={<Navigate to="/webview/games/dino?table_name=table1" replace />} />
           <Route path="/webview/games/:game_type" element={<GamePage />} />
           <Route path="/webview/games/result" element={<GameResult />} />
           <Route path="*" element={<NotFound />} />
