@@ -346,7 +346,7 @@ const GamePage = () => {
   const handleGameOver = useCallback((finalScore: number) => {
     setScore(finalScore);
     setPhase("waiting");
-    bgmRef.current?.stop();
+    gameBgmRef.current?.stop();
     const elapsed = (Date.now() - gameStartRef.current) / 1000;
     const remaining = MAX_GAME_TIME + MAX_TIME_BUFFER - elapsed;
     const waitMs = Math.max(0, remaining * 1000);
@@ -356,7 +356,8 @@ const GamePage = () => {
   useEffect(() => {
     return () => {
       if (waitTimerRef.current) clearTimeout(waitTimerRef.current);
-      bgmRef.current?.close(); bgmRef.current = null;
+      gameBgmRef.current?.close(); gameBgmRef.current = null;
+      introBgmRef.current?.close(); introBgmRef.current = null;
     };
   }, []);
 
