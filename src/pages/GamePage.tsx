@@ -103,13 +103,14 @@ class ChiptuneBGM {
   private rafId = 0;
   private lastTs = 0;
 
-  private melody = [
+  protected bpm = 160;
+  protected melody = [
     523,659,784,659,523,659,784,1047,
     880,784,659,784,523,659,523,392,
     523,659,784,880,784,659,523,659,
     392,523,659,523,392,330,392,523,
   ];
-  private bass = [
+  protected bass = [
     130,130,164,164,130,130,164,196,
     164,164,130,164,130,130,130,98,
     130,130,164,174,164,130,130,130,
@@ -127,7 +128,7 @@ class ChiptuneBGM {
     return { ctx, master: this.masterGain };
   }
 
-  private playNote(freq: number, bassFreq: number) {
+  protected playNote(freq: number, bassFreq: number) {
     const res = this.getMaster();
     if (!res) return;
     const { ctx, master } = res;
@@ -147,7 +148,7 @@ class ChiptuneBGM {
     if (this.running) return;
     this.running = true;
     this.lastTs = 0;
-    const BPM = 160, beatLen = 60/BPM;
+    const beatLen = 60 / this.bpm;
     const tick = (ts: number) => {
       if (!this.running) return;
       if (this.lastTs === 0) { this.lastTs = ts; this.rafId = requestAnimationFrame(tick); return; }
@@ -176,6 +177,63 @@ class ChiptuneBGM {
   }
 
   close() { this.stop(); }
+}
+
+// ─── 게임 플레이 전용 BGM (빠른 액션 멜로디) ─────────────────────────────────
+class GameChiptuneBGM extends ChiptuneBGM {
+  protected bpm = 190;
+  protected melody = [
+    784,880,988,880,784,659,784,880,
+    988,1047,988,880,784,880,784,659,
+    523,659,784,659,523,440,523,659,
+    784,659,523,440,392,440,523,659,
+    784,988,1175,988,784,659,523,659,
+    784,880,784,659,523,659,784,659,
+    523,440,392,330,392,440,523,440,
+    392,330,294,330,392,440,523,659,
+  ];
+  protected bass = [
+    196,196,247,247,196,164,196,196,
+    247,261,247,196,196,196,196,164,
+    130,164,196,164,130,110,130,164,
+    196,164,130,110,98,110,130,164,
+    196,247,294,247,196,164,130,164,
+    196,220,196,164,130,164,196,164,
+    130,110,98,82,98,110,130,110,
+    98,82,73,82,98,110,130,164,
+  ];
+
+  protected playNote(freq: number, bassFreq: number) {
+    const ctx = getAC();
+    if (!ctx) return;
+    const master = (() => {
+      const g = ctx.createGain();
+      g.gain.setValueAtTime(0.07, ctx.currentTime);
+      g.connect(ctx.destination);
+      return g;
+    })();
+    const t = ctx.currentTime;
+    const dur = 0.10;
+    // 리드 — 사각파
+    const osc = ctx.createOscillator(), g = ctx.createGain();
+    osc.type = "square"; osc.frequency.setValueAtTime(freq, t);
+    g.gain.setValueAtTime(0.55, t); g.gain.exponentialRampToValueAtTime(0.001, t+dur);
+    osc.connect(g); g.connect(master); osc.start(t); osc.stop(t+dur);
+    // 베이스 — 삼각파
+    const b = ctx.createOscillator(), bg = ctx.createGain();
+    b.type = "triangle"; b.frequency.setValueAtTime(bassFreq, t);
+    bg.gain.setValueAtTime(0.45, t); bg.gain.exponentialRampToValueAtTime(0.001, t+dur*1.4);
+    b.connect(bg); bg.connect(master); b.start(t); b.stop(t+dur*1.4);
+    // 타악기 노이즈
+    if ((this as any)._noteIdx % 4 === 0) {
+      const buf = ctx.createBuffer(1, ctx.sampleRate*0.03, ctx.sampleRate);
+      const d = buf.getChannelData(0);
+      for (let i = 0; i < d.length; i++) d[i] = (Math.random()*2-1)*(1-i/d.length);
+      const ns = ctx.createBufferSource(), ng = ctx.createGain();
+      ns.buffer = buf; ng.gain.setValueAtTime(0.18, t); ng.gain.exponentialRampToValueAtTime(0.001, t+0.03);
+      ns.connect(ng); ng.connect(master); ns.start(t);
+    }
+  }
 }
 
 const MAX_TIME_BUFFER = 15;
