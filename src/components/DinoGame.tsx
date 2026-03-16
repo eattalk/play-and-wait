@@ -121,8 +121,8 @@ const STAR_SPAWN_INTERVAL = 1.1;
 const DUST_VX = 180, DUST_VY = -130, DUST_G = 360, DUST_DECAY = 2.8;
 const STAR_SPIN = 3.2;
 
-// 난이도: EVO_EVERY 장애물마다 변신 (더 자주 변신)
-const EVO_EVERY = 2;
+// 난이도: EVO_EVERY 장애물마다 변신 (최소 4개)
+const EVO_EVERY = 4;
 const EVO_MAX = 11;
 
 // 12단계 변신 (기존 10 → 12단계, 더 화려)
