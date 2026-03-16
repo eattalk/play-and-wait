@@ -676,12 +676,12 @@ const DinoGame = ({ playing, maxTime, onScoreChange, onTimeChange, onGameOver }:
     }
 
     function randomObsInterval() {
-      // 점프 체공시간(≈0.70s) + 착지후 반응 여유(0.30s) = 최소 1.00s 보장
+      // 점프 체공시간(≈0.70s) + 착지 반응 여유 → 최소 안전 간격
       const jumpAirTime = (Math.abs(JUMP_VEL) * 2) / GRAVITY; // ~0.698s
-      const MIN_SAFE = jumpAirTime + 0.30;                      // ~1.00s
-      // 속도가 빠를수록 간격 더 짧아져서 더 빡빡해짐
-      const base = 1.55 - (s.speed - BASE_SPEED) / 220;
-      const raw  = base * (0.65 + Math.random() * 0.45);
+      const MIN_SAFE = jumpAirTime + 0.22;                      // ~0.92s (더 빡빡하게)
+      // 속도 가속에 따라 간격이 훨씬 빠르게 줄어듦
+      const base = 1.35 - (s.speed - BASE_SPEED) / 160;
+      const raw  = base * (0.55 + Math.random() * 0.40);
       return Math.max(MIN_SAFE, raw);
     }
 
