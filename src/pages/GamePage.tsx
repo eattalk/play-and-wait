@@ -271,7 +271,7 @@ const GamePage = () => {
   const goToResult = useCallback((finalScore: number) => {
     gameBgmRef.current?.close(); gameBgmRef.current = null;
     introBgmRef.current?.close(); introBgmRef.current = null;
-    navigate(`/webview/games/result?score=${finalScore}`);
+    navigate(`/webview/games/result?score=${Math.round(finalScore)}`);
   }, [navigate]);
 
   const startGame = () => {
