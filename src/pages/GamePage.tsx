@@ -251,7 +251,7 @@ const GamePage = () => {
   const { game_type } = useParams();
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
-  const table_name = searchParams.get("table_name") || "table1";
+  const table_name = searchParams.get("table_name") ?? "";
 
   const [phase, setPhase] = useState<"instructions" | "countdown" | "playing" | "waiting">("instructions");
   const [countdown, setCountdown] = useState(3);
