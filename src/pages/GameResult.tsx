@@ -2,7 +2,9 @@ import { useSearchParams } from "react-router-dom";
 
 const GameResult = () => {
   const [searchParams] = useSearchParams();
-  const score = searchParams.get("score") || "0";
+  const rawScore = parseInt(searchParams.get("score") || "0", 10);
+  // 전송 형식: displayScore * 1000 + uniqueSuffix(0~999) → 화면엔 displayScore만 표시
+  const score = Math.floor(rawScore / 1000);
 
   return (
     <div className="min-h-screen bg-background flex flex-col items-center justify-center gap-8">
