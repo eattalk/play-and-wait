@@ -792,7 +792,7 @@ const DinoGame = ({ playing, maxTime, onScoreChange, onTimeChange, onGameOver }:
       // Move obstacles + evolution tracking
       s.obstacles = s.obstacles.filter(ob => {
         ob.x -= s.speed * dt;
-        if (checkCollision(ob)) { s.gameOver = true; createHitSound(getAudio()); onGameOver(s.score); return false; }
+        if (checkCollision(ob)) { s.gameOver = true; createHitSound(getAudio()); onGameOver(Math.round(s.scoreExact)); return false; }
         if (!ob.passed && ob.x + ob.w < DINO_X - 2) {
           ob.passed = true;
           s.obstaclesPassed++;
