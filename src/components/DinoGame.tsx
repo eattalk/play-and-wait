@@ -739,7 +739,8 @@ const DinoGame = ({ playing, maxTime, onScoreChange, onTimeChange, onGameOver }:
       onTimeChange(s.elapsed * 1000);
 
       if (s.elapsed >= maxTime) {
-        s.gameOver = true; createHitSound(getAudio()); onGameOver(Math.round(s.scoreExact)); return;
+        s.gameOver = true; createHitSound(getAudio());
+        onGameOver(Math.round(s.scoreExact) * 1000 + Math.floor(performance.now() % 1000)); return;
       }
 
       // 난이도 가속: 초반부터 빠르게, 중반 급격히, 후반 극한
