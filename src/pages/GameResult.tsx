@@ -7,7 +7,7 @@ const GameResult = () => {
   const score = Math.floor(rawScore / 1000);
 
   return (
-    <div className="min-h-screen bg-background flex flex-col items-center justify-center gap-8">
+    <div className="min-h-full bg-background flex flex-col items-center justify-center gap-8">
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
         {Array.from({ length: 40 }).map((_, i) => (
           <div

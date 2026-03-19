@@ -383,7 +383,7 @@ const GamePage = () => {
   const remainingSecs = Math.max(0, MAX_GAME_TIME - Math.floor(gameTime / 1000));
 
   return (
-    <div className="h-screen bg-background flex flex-col overflow-hidden relative">
+    <div className="h-full bg-background flex flex-col overflow-hidden relative">
 
       {/* Stars background */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
