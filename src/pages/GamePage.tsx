@@ -527,7 +527,7 @@ const GamePage = () => {
       )}
 
       {/* ── Game ── */}
-      {(phase === "playing" || phase === "waiting") && (
+      {phase === "playing" && (
         <div className="relative z-10 flex flex-col flex-1 overflow-hidden">
 
           {/* HUD bar */}
