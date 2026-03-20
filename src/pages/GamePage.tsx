@@ -330,7 +330,7 @@ const GamePage = () => {
       setPhase("playing");
       setShowGoal(false);
       goalPlayedRef.current = false;
-      gameStartRef.current = Date.now();
+      
       if (!gameBgmRef.current) gameBgmRef.current = new GameChiptuneBGM();
       gameBgmRef.current.start();
       return;
