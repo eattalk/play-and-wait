@@ -355,14 +355,9 @@ const GamePage = () => {
 
   const handleGameOver = useCallback((finalScore: number) => {
     // finalScore = displayScore * 1000 + uniqueSuffix(0-999)
-    // HUD에는 게임 중 보인 점수(displayScore)를 그대로 표시
     setScore(Math.floor(finalScore / 1000));
-    setPhase("waiting");
     gameBgmRef.current?.stop();
-    const elapsed = (Date.now() - gameStartRef.current) / 1000;
-    const remaining = MAX_GAME_TIME + MAX_TIME_BUFFER - elapsed;
-    const waitMs = Math.max(0, remaining * 1000);
-    waitTimerRef.current = setTimeout(() => { goToResult(finalScore); }, waitMs);
+    goToResult(finalScore);
   }, [goToResult]);
 
   useEffect(() => {
