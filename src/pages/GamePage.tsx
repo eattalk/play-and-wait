@@ -252,7 +252,7 @@ const GamePage = () => {
   const navigate = useNavigate();
   const table_name = searchParams.get("table_name") ?? "";
 
-  const [phase, setPhase] = useState<"instructions" | "countdown" | "playing" | "waiting">("instructions");
+  const [phase, setPhase] = useState<"instructions" | "countdown" | "playing">("instructions");
   const [countdown, setCountdown] = useState(3);
   const [score, setScore] = useState(0);
   const [gameTime, setGameTime] = useState(0);
@@ -260,9 +260,7 @@ const GamePage = () => {
   const [showGoal, setShowGoal] = useState(false);
   const [audioUnlocked, setAudioUnlocked] = useState(false);
 
-  const waitTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const autoStartRef = useRef<ReturnType<typeof setInterval> | null>(null);
-  const gameStartRef = useRef<number>(0);
   const introBgmRef = useRef<ChiptuneBGM | null>(null);  // 인트로 BGM
   const gameBgmRef = useRef<GameChiptuneBGM | null>(null); // 게임 BGM
   const goalPlayedRef = useRef(false);
