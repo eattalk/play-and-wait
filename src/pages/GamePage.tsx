@@ -243,7 +243,6 @@ class GameChiptuneBGM extends ChiptuneBGM {
   }
 }
 
-const MAX_TIME_BUFFER = 15;
 const MAX_GAME_TIME = 40;
 const GOAL_WARN_SECS = 0;
 
