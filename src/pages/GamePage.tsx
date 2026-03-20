@@ -359,7 +359,6 @@ const GamePage = () => {
 
   useEffect(() => {
     return () => {
-      if (waitTimerRef.current) clearTimeout(waitTimerRef.current);
       gameBgmRef.current?.close(); gameBgmRef.current = null;
       introBgmRef.current?.close(); introBgmRef.current = null;
     };
