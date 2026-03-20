@@ -652,6 +652,7 @@ const GamePage = () => {
                 </p>
               </div>
             </div>
+          )}
         </div>
       )}
     </div>
