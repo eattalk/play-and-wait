@@ -652,27 +652,6 @@ const GamePage = () => {
                 </p>
               </div>
             </div>
-          )}
-
-          {/* Game over overlay */}
-          {phase === "waiting" && (
-            <div className="absolute inset-0 flex items-center justify-center bg-background/70 z-20">
-              <div className="font-pixel text-center space-y-4 p-8 border border-neon-green/40 rounded bg-card/90">
-                <p className="text-neon-green text-lg">GAME OVER!</p>
-                <p className="text-neon-yellow text-sm">SCORE: {score}</p>
-                <p className="text-muted-foreground text-xs mt-4">Waiting for other players...</p>
-                <div className="flex gap-1 justify-center mt-2">
-                  {[0, 1, 2].map(i => (
-                    <div
-                      key={i}
-                      className="w-2 h-2 rounded-full bg-neon-green"
-                      style={{ animation: `bounce 1s ease-in-out ${i * 0.2}s infinite` }}
-                    />
-                  ))}
-                </div>
-              </div>
-            </div>
-          )}
         </div>
       )}
     </div>
