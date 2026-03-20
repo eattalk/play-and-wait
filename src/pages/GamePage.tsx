@@ -243,7 +243,6 @@ class GameChiptuneBGM extends ChiptuneBGM {
   }
 }
 
-const MAX_TIME_BUFFER = 15;
 const MAX_GAME_TIME = 40;
 const GOAL_WARN_SECS = 0;
 
@@ -253,7 +252,7 @@ const GamePage = () => {
   const navigate = useNavigate();
   const table_name = searchParams.get("table_name") ?? "";
 
-  const [phase, setPhase] = useState<"instructions" | "countdown" | "playing" | "waiting">("instructions");
+  const [phase, setPhase] = useState<"instructions" | "countdown" | "playing">("instructions");
   const [countdown, setCountdown] = useState(3);
   const [score, setScore] = useState(0);
   const [gameTime, setGameTime] = useState(0);
@@ -261,9 +260,7 @@ const GamePage = () => {
   const [showGoal, setShowGoal] = useState(false);
   const [audioUnlocked, setAudioUnlocked] = useState(false);
 
-  const waitTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const autoStartRef = useRef<ReturnType<typeof setInterval> | null>(null);
-  const gameStartRef = useRef<number>(0);
   const introBgmRef = useRef<ChiptuneBGM | null>(null);  // 인트로 BGM
   const gameBgmRef = useRef<GameChiptuneBGM | null>(null); // 게임 BGM
   const goalPlayedRef = useRef(false);
@@ -333,7 +330,7 @@ const GamePage = () => {
       setPhase("playing");
       setShowGoal(false);
       goalPlayedRef.current = false;
-      gameStartRef.current = Date.now();
+      
       if (!gameBgmRef.current) gameBgmRef.current = new GameChiptuneBGM();
       gameBgmRef.current.start();
       return;
@@ -355,19 +352,13 @@ const GamePage = () => {
 
   const handleGameOver = useCallback((finalScore: number) => {
     // finalScore = displayScore * 1000 + uniqueSuffix(0-999)
-    // HUD에는 게임 중 보인 점수(displayScore)를 그대로 표시
     setScore(Math.floor(finalScore / 1000));
-    setPhase("waiting");
     gameBgmRef.current?.stop();
-    const elapsed = (Date.now() - gameStartRef.current) / 1000;
-    const remaining = MAX_GAME_TIME + MAX_TIME_BUFFER - elapsed;
-    const waitMs = Math.max(0, remaining * 1000);
-    waitTimerRef.current = setTimeout(() => { goToResult(finalScore); }, waitMs);
+    goToResult(finalScore);
   }, [goToResult]);
 
   useEffect(() => {
     return () => {
-      if (waitTimerRef.current) clearTimeout(waitTimerRef.current);
       gameBgmRef.current?.close(); gameBgmRef.current = null;
       introBgmRef.current?.close(); introBgmRef.current = null;
     };
@@ -536,7 +527,7 @@ const GamePage = () => {
       )}
 
       {/* ── Game ── */}
-      {(phase === "playing" || phase === "waiting") && (
+      {phase === "playing" && (
         <div className="relative z-10 flex flex-col flex-1 overflow-hidden">
 
           {/* HUD bar */}
@@ -659,26 +650,6 @@ const GamePage = () => {
                 <p style={{ fontSize: "clamp(2rem, 6vw, 4rem)", color: "#ffcc00", textShadow: "0 0 40px #ffcc00, 0 0 80px #ff8800" }}>
                   🏁 골인!
                 </p>
-              </div>
-            </div>
-          )}
-
-          {/* Game over overlay */}
-          {phase === "waiting" && (
-            <div className="absolute inset-0 flex items-center justify-center bg-background/70 z-20">
-              <div className="font-pixel text-center space-y-4 p-8 border border-neon-green/40 rounded bg-card/90">
-                <p className="text-neon-green text-lg">GAME OVER!</p>
-                <p className="text-neon-yellow text-sm">SCORE: {score}</p>
-                <p className="text-muted-foreground text-xs mt-4">Waiting for other players...</p>
-                <div className="flex gap-1 justify-center mt-2">
-                  {[0, 1, 2].map(i => (
-                    <div
-                      key={i}
-                      className="w-2 h-2 rounded-full bg-neon-green"
-                      style={{ animation: `bounce 1s ease-in-out ${i * 0.2}s infinite` }}
-                    />
-                  ))}
-                </div>
               </div>
             </div>
           )}
