@@ -268,8 +268,14 @@ const GamePage = () => {
   const goToResult = useCallback((finalScore: number) => {
     gameBgmRef.current?.close(); gameBgmRef.current = null;
     introBgmRef.current?.close(); introBgmRef.current = null;
-    navigate(`/webview/games/result?score=${Math.round(finalScore)}`);
-  }, [navigate]);
+    const params = new URLSearchParams({
+      score: String(Math.round(finalScore)),
+      table_name,
+      finished: "true",
+      timestamp: String(Date.now()),
+    });
+    navigate(`/webview/games/result?${params.toString()}`);
+  }, [navigate, table_name]);
 
   const startGame = () => {
     if (autoStartRef.current) { clearInterval(autoStartRef.current); autoStartRef.current = null; }
