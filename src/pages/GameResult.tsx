@@ -1,10 +1,18 @@
 import { useSearchParams } from "react-router-dom";
+import { useEffect, useState } from "react";
 
 const GameResult = () => {
   const [searchParams] = useSearchParams();
   const rawScore = parseInt(searchParams.get("score") || "0", 10);
-  // 전송 형식: displayScore * 1000 + uniqueSuffix(0~999) → 화면엔 displayScore만 표시
   const score = Math.floor(rawScore / 1000);
+
+  const [dots, setDots] = useState("");
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setDots((prev) => (prev.length >= 3 ? "" : prev + "."));
+    }, 500);
+    return () => clearInterval(interval);
+  }, []);
 
   return (
     <div className="min-h-full bg-background flex flex-col items-center justify-center gap-8">
@@ -31,11 +39,14 @@ const GameResult = () => {
         </div>
         <p className="font-pixel text-muted-foreground text-xs">YOUR FINAL SCORE</p>
 
-        <div className="pt-4 border-t border-neon-green/20">
-          <p className="font-pixel text-neon-green text-lg animate-pulse" style={{ textShadow: "0 0 15px hsl(var(--neon-green))" }}>
-            WAITING FOR OTHER PLAYERS...
+        <div className="pt-6 border-t border-neon-green/20 space-y-3">
+          <p
+            className="font-pixel text-neon-green text-2xl animate-pulse leading-relaxed"
+            style={{ textShadow: "0 0 20px hsl(var(--neon-green))" }}
+          >
+            WAITING FOR OTHER PLAYERS{dots}
           </p>
-          <p className="font-pixel text-muted-foreground text-[10px] mt-2">
+          <p className="font-pixel text-muted-foreground text-xs">
             ALL SCORES WILL BE RANKED SOON
           </p>
         </div>
