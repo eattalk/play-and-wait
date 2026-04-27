@@ -4,8 +4,15 @@ import { useEffect, useState } from "react";
 const GameResult = () => {
   const [searchParams] = useSearchParams();
   const rawScore = parseInt(searchParams.get("score") || "0", 10);
-  // 전송 형식: displayScore * 1000 + uniqueSuffix(0~999) → 화면엔 displayScore만 표시
   const score = Math.floor(rawScore / 1000);
+
+  const [dots, setDots] = useState("");
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setDots((prev) => (prev.length >= 3 ? "" : prev + "."));
+    }, 500);
+    return () => clearInterval(interval);
+  }, []);
 
   return (
     <div className="min-h-full bg-background flex flex-col items-center justify-center gap-8">
