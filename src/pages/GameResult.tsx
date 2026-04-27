@@ -30,6 +30,15 @@ const GameResult = () => {
           {score}
         </div>
         <p className="font-pixel text-muted-foreground text-xs">YOUR FINAL SCORE</p>
+
+        <div className="pt-4 border-t border-neon-green/20">
+          <p className="font-pixel text-neon-green text-lg animate-pulse" style={{ textShadow: "0 0 15px hsl(var(--neon-green))" }}>
+            WAITING FOR OTHER PLAYERS...
+          </p>
+          <p className="font-pixel text-muted-foreground text-[10px] mt-2">
+            ALL SCORES WILL BE RANKED SOON
+          </p>
+        </div>
       </div>
     </div>
   );
