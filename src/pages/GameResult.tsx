@@ -39,11 +39,14 @@ const GameResult = () => {
         </div>
         <p className="font-pixel text-muted-foreground text-xs">YOUR FINAL SCORE</p>
 
-        <div className="pt-4 border-t border-neon-green/20">
-          <p className="font-pixel text-neon-green text-lg animate-pulse" style={{ textShadow: "0 0 15px hsl(var(--neon-green))" }}>
-            WAITING FOR OTHER PLAYERS...
+        <div className="pt-6 border-t border-neon-green/20 space-y-3">
+          <p
+            className="font-pixel text-neon-green text-2xl animate-pulse leading-relaxed"
+            style={{ textShadow: "0 0 20px hsl(var(--neon-green))" }}
+          >
+            WAITING FOR OTHER PLAYERS{dots}
           </p>
-          <p className="font-pixel text-muted-foreground text-[10px] mt-2">
+          <p className="font-pixel text-muted-foreground text-xs">
             ALL SCORES WILL BE RANKED SOON
           </p>
         </div>
